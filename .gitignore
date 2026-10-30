@@ -1,0 +1,36 @@
+# Python / uv
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Data & heavy artifacts (see README for how to get them)
+data/*
+!data/.gitkeep
+results/**/*.npy
+results/**/*.pt
+*.zip
+*.7z
+
+# Model weights cache (pyiqa / torch hub)
+.cache/
+checkpoints/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+Desktop.ini
+*:Zone.Identifier
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# Report build intermediates
+report/*.aux
+report/*.log
+report/*.out
+report/*.synctex.gz
