@@ -13,6 +13,7 @@ data/*
 !data/.gitkeep
 results/**/*.npy
 results/**/*.pt
+results/smoke_*
 *.zip
 *.7z
 

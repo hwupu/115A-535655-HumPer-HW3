@@ -31,13 +31,25 @@ uv run python -c "import humper; print(humper.get_device())"
   - Without a GPU it falls back to `cpu`, which is still fine for this homework.
 - Set `git config --global core.autocrlf input`. `.gitattributes` already forces LF.
 
+You don't need to recompute: `results/scores.csv` is committed (D-16).
+
 **macOS notes**
 - `get_device()` returns `mps`. Unsupported ops fall back to CPU automatically.
 - Force a device with `HUMPER_DEVICE=cpu uv run ...`.
 
 ### 3. Get the data
 
-Download KADID-10k from <https://database.mmsp-kn.de/kadid-10k-database.html> and unzip it so that the layout is:
+Download KADID-10k (3.1 GB). The official server ([database.mmsp-kn.de](https://database.mmsp-kn.de/kadid-10k-database.html)) was unreachable on 2026-10-30, so we use the pyiqa mirror (D-14):
+
+```bash
+mkdir -p data/_download
+curl -L -C - -o data/_download/kadid10k.tgz \
+  https://huggingface.co/datasets/chaofengc/IQA-PyTorch-Datasets/resolve/main/kadid10k.tgz
+tar -xzf data/_download/kadid10k.tgz -C data --exclude='.DS_Store'
+uv run jupyter nbconvert --to notebook --execute --stdout notebooks/01_data_check.ipynb > /dev/null  # asserts 10,125 pairs
+```
+
+The layout should be:
 
 ```
 data/kadid10k/
@@ -52,8 +64,9 @@ data/kadid10k/
 ```bash
 uv run jupyter lab                          # macOS: opens the browser
 uv run jupyter lab --no-browser             # WSL: open the printed http://localhost:8888/... URL in Windows
-uv run python scripts/compute_scores.py     # full scoring → results/scores.csv   (Sprint 1)
-uv run pytest                               # metric sanity checks              (Sprint 1)
+uv run python scripts/compute_scores.py     # full scoring → results/scores.csv (~40 min on M2 Pro; resumable)
+uv run python scripts/compute_scores.py --limit 40 --out results/smoke_cpu.csv   # quick smoke test
+uv run pytest                               # unit + sanity tests
 ```
 
 VS Code users can open the repo with the *Remote - WSL* extension and pick the `.venv` kernel.

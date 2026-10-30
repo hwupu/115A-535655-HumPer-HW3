@@ -5,7 +5,7 @@ This is the canonical agent file, read by Codex, Cursor, Copilot, etc.
 
 **Task:** NYCU 535655 HW3: Perceptual Metric Reproduction & Failure Analysis (spec: `doc/references/HW3.pdf`).
 Due **2026-11-17 before class**. Repo: https://github.com/hwupu/115A-535655-HumPer-HW3 (public).
-Team of 2: Member A (@hwupu, macOS, M2 Pro) and Member B (Windows + WSL2).
+Team of 2: Member A (@hwupu, macOS, M2 Pro) and Member B (@ALLEN07056, Windows + WSL2).
 
 ## Read first
 - `README.md`: setup & run commands

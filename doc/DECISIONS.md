@@ -18,6 +18,12 @@ A `Proposed` decision needs both members to agree at the next planning/review.
 | D-11 | 2026-10-30 | Default PyPI torch wheels (no custom index); one universal `uv.lock` | Linux wheel already has CUDA and falls back to CPU; simplest config. Cost: large download on WSL | Proposed | A |
 | D-12 | 2026-10-30 | Final reported numbers come from one full run on one machine; other device only cross-checks | Avoid mixing MPS/CUDA/CPU numerical differences in one table | Proposed | B |
 | D-13 | 2026-10-30 | Public GitHub repo `hwupu/115A-535655-HumPer-HW3`; HW3.pdf committed; dataset never committed | Owner's choice; easy sharing with B. Dataset excluded for licensing/size | Accepted | A |
+| D-14 | 2026-10-30 | Get KADID-10k from the pyiqa HuggingFace mirror (`chaofengc/IQA-PyTorch-Datasets/kadid10k.tgz`) | Official server (datasets.vqa.mmsp-kn.de) timed out on 2026-10-30. Same files; checked: 10,125 pairs, MOS range | Proposed | A |
+| D-15 | 2026-10-30 | Use `pyiqa` default configs: PSNR on RGB; SSIM & MS-SSIM on Y (luma); LPIPS v0.1 AlexNet; DISTS | Standard settings used in the literature; reported in Setup section | Proposed | A |
+| D-16 | 2026-10-30 | Commit `results/scores.csv` (~1 MB) | B can analyse on any machine without recomputing; final numbers come from one run (D-12) | Proposed | A |
+| D-17 | 2026-10-30 | Traditional metrics on CPU, learned metrics on accelerator (`metrics.device_for`) | pyiqa SSIM casts to float64, which MPS rejects; CPU also gives identical results on macOS/WSL | Proposed | A |
+| D-18 | 2026-10-31 | Keep the 320 pixel-identical pairs (4 per ref: gaussian/motion blur L1, saturation-2 L1, mean-shift L3) in main results; report "excluding identical" as a sensitivity check | They are part of KADID's official set. Excluding them lowers SRCC by about 0.01–0.04 and doesn't change the ranking | Proposed | A |
+| D-19 | 2026-10-31 | If the logistic fit doesn't converge, PLCC falls back to raw (flag `fit_ok=False`) | 2 of 125 per-type fits fail (color_block/psnr, color_saturation_1/ms_ssim); report should footnote this | Proposed | A |
 
 ## Template
 

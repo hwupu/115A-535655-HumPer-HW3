@@ -1,0 +1,61 @@
+{
+  "finished_utc": "2026-10-30T16:31:36+00:00",
+  "seconds": 2383.5,
+  "device": "mps",
+  "device_per_metric": {
+    "psnr": "cpu",
+    "ssim": "cpu",
+    "ms_ssim": "cpu",
+    "lpips": "mps",
+    "dists": "mps"
+  },
+  "platform": "macOS-27.0.1-arm64-arm-64bit",
+  "python": "3.11.14",
+  "packages": {
+    "torch": "2.15.0",
+    "torchvision": "0.29.2",
+    "pyiqa": "0.1.16",
+    "numpy": "2.4.6",
+    "pandas": "3.1.0",
+    "scipy": "1.17.1"
+  },
+  "args": {
+    "out": "/Users/phwu/Documents/NYCU/12_\u78a9\u4e00\u4e0b/535655 \u4eba\u985e\u611f\u77e5\u5c0e\u5411\u7684\u8996\u89ba\u8207\u591a\u6a21\u614b\u8868\u5fb5\u5b78\u7fd2 Human Perceptual-Centric Vision and Multimodal Representation Learning/HW3/115A-535655-HumPer-HW3/results/scores.csv",
+    "metrics": [
+      "psnr",
+      "ssim",
+      "ms_ssim",
+      "lpips",
+      "dists"
+    ],
+    "limit": null,
+    "n_refs": null,
+    "seed": 0,
+    "batch_size": 16,
+    "device": null,
+    "save_every": 50
+  },
+  "n_pairs": 10125,
+  "metrics": {
+    "psnr": {
+      "pyiqa": "psnr",
+      "higher_is_better": true
+    },
+    "ssim": {
+      "pyiqa": "ssim",
+      "higher_is_better": true
+    },
+    "ms_ssim": {
+      "pyiqa": "ms_ssim",
+      "higher_is_better": true
+    },
+    "lpips": {
+      "pyiqa": "lpips",
+      "higher_is_better": false
+    },
+    "dists": {
+      "pyiqa": "dists",
+      "higher_is_better": false
+    }
+  }
+}

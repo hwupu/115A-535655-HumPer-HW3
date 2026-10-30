@@ -8,7 +8,7 @@ with the least process that still keeps us honest.
 | Who | Machine | Scrum hat | Dev focus |
 |---|---|---|---|
 | **Member A** (@hwupu) | macOS, M2 Pro (MPS) | Product Owner — owns `BACKLOG.md` priority, accepts work | Pipeline: data loading, metric computation, correlations |
-| **Member B** | Windows + WSL2 Ubuntu (CUDA or CPU) | Scrum Master — keeps `BOARD.md` current, runs ceremonies | Analysis: failure-case mining, figures, report |
+| **Member B** (@ALLEN07056) | Windows + WSL2 Ubuntu (CUDA or CPU) | Scrum Master — keeps `BOARD.md` current, runs ceremonies | Analysis: failure-case mining, figures, report |
 | **AI agent** (Claude Code, Codex, …) | — | Not a team member — a tool | Drafts code/docs on request; a human owns every output |
 
 Both members review each other's work. Both write the report's Discussion section.
@@ -57,7 +57,7 @@ Both members review each other's work. Both write the report's Discussion sectio
 
 ## 7. Git (minimal)
 
-- Repo: **public** at <https://github.com/hwupu/115A-535655-HumPer-HW3> (owner @hwupu; B is added as collaborator).
+- Repo: **public** at <https://github.com/hwupu/115A-535655-HumPer-HW3> (owner @hwupu; @ALLEN07056 has write access).
 - Public, so never commit secrets/tokens or the dataset (license: research use, not redistributable). WSL member clones into `~/`, not `/mnt/c/`.
 - `.gitattributes` forces LF line endings; WSL member also sets `core.autocrlf input`.
 - Use a single `main` branch with small commits; prefix each message with its backlog ID.

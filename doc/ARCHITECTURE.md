@@ -53,11 +53,11 @@ data/kadid10k/ ──data.py──▶ pairs DataFrame
 
 **`device.py`**: `get_device(prefer=None) -> torch.device`.
 
-**`data.py`**: `load_pairs(root, subset=None, seed=0) -> DataFrame`
-Columns: `id, ref_path, dist_path, ref_id, dist_type, dist_name, level, mos`.
+**`data.py`**: `load_pairs(root, n_refs=None, seed=0) -> DataFrame`, `load_image(rel_path) -> (3,H,W) in [0,1]`
+Columns: `id, ref_path, dist_path, ref_id, dist_type, dist_name, dist_group, level, mos`. The `n_refs` subset samples whole reference images.
 `mos` is normalised so that **higher = better quality**.
 
-**`metrics.py`**: registry entries have the form `{name, pyiqa_name, kwargs, higher_is_better}`.
+**`metrics.py`**: `MetricSpec(name, pyiqa_name, higher_is_better, family, note)`; `create()` asserts our direction == pyiqa's `lower_better`; `aligned()` flips sign.
 - `PSNR, SSIM, MS-SSIM`: higher = better
 - `LPIPS (alex|vgg), DISTS`: lower = better → negated in `evaluate.py` before correlating
 
@@ -65,7 +65,8 @@ Columns: `id, ref_path, dist_path, ref_id, dist_type, dist_name, level, mos`.
 
 **`evaluate.py`**
 - `srcc(x, y)`
-- `plcc(x, y, fit="logistic5")`: fits the VQEG 5-parameter logistic, then computes Pearson
+- `plcc(x, y, fit="logistic5")`: fits the VQEG 5-parameter logistic (on z-scored x), then computes Pearson
+- `krcc(x, y)`: Kendall, as an extra
 - `table(scores, by=None | "dist_type")`
 
 **`failures.py`**: converts each metric and the MOS to percentile ranks (direction-aligned), then computes
@@ -83,12 +84,13 @@ It returns the top-k cases, capped at N per distortion type so the selection sta
 | Device from `get_device()` | `mps` | `cuda` if NVIDIA GPU + Windows driver, else `cpu` |
 | Jupyter | `uv run jupyter lab` | `uv run jupyter lab --no-browser`, open URL in Windows browser (or VS Code Remote-WSL) |
 
+- **Traditional metrics (PSNR/SSIM/MS-SSIM) always run on CPU** (`metrics.device_for`). pyiqa's SSIM uses float64, which MPS doesn't support. This also makes them bit-identical across machines. Only LPIPS/DISTS use the accelerator.
 - Code never hard-codes a device. It calls `humper.get_device()`, which also sets `PYTORCH_ENABLE_MPS_FALLBACK=1`.
 - All paths are `pathlib.Path` relative to the repo root. That way the same code runs on both OSes, and `scores.csv` stores **relative** paths.
 - **Device-independence:** MPS, CUDA and CPU can differ in the last decimals. `scores.csv` records the `device` used. The final numbers come from **one** full run on one machine, so the report table is internally consistent.
 - `compute_scores.py` is resumable: it skips IDs already present in `scores.csv`.
 - `--limit N` gives a fast smoke run.
-- Seeds and package versions are written to `results/run_info.json`.
+- Seeds, devices and package versions are written to `results/scores_run_info.json`.
 
 ## 5. Correctness checks (rubric: "correct implementation", 15 pts)
 
@@ -97,3 +99,4 @@ It returns the top-k cases, capped at N per distortion type so the selection sta
 3. Within each (ref, dist_type), metric scores move monotonically with distortion level (check with Spearman vs level).
 4. The sign/direction check is applied before PLCC and printed in the notebook.
 5. Cross-device: on 20 images, CPU vs MPS (A) and CPU vs CUDA (B) agree to within 1e-3 relative error.
+   ✔ A, 2026-10-30, 40 pairs: traditional metrics identical; LPIPS max 2.5e-6, DISTS max 7.1e-6.
