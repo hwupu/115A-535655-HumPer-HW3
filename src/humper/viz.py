@@ -81,3 +81,44 @@ def pair_figure(row_i: pd.Series, row_j: pd.Series, note: str = "") -> plt.Figur
         fig.suptitle(note, fontsize=9)
     fig.tight_layout()
     return fig
+
+
+def grid_heatmap(ax: plt.Axes, g: pd.DataFrame, title: str, lim: float, highlight=(), cbar_label: str = "") -> None:
+    """One distortion-type x level grid on a diverging blue-red scale centred at 0.
+    `highlight` = [(dist_name, level), ...] cells outlined in black (the selected images).
+    Gray cells = no data (only pixel-identical pairs there, removed by D-18)."""
+    ax.set_facecolor("#c8c8c8")
+    im = ax.imshow(g.to_numpy(float), cmap="RdBu_r", vmin=-lim, vmax=lim, aspect="auto")
+    ax.set_xticks(range(g.shape[1]), [f"L{c}" for c in g.columns], fontsize=7)
+    ax.set_yticks(range(g.shape[0]), g.index, fontsize=6.5)
+    ax.set_title(title, fontsize=8.5)
+    for name, level in highlight:
+        y, x = list(g.index).index(name), list(g.columns).index(level)
+        ax.add_patch(plt.Rectangle((x - 0.5, y - 0.5), 1, 1, fill=False, lw=2, ec="black"))
+    ax.figure.colorbar(im, ax=ax, fraction=0.06, pad=0.03).set_label(cbar_label, fontsize=7)
+
+
+def case_heatmaps(g_all: pd.DataFrame, g_ref: pd.DataFrame, ref_id: int, highlight, label: str, title: str) -> plt.Figure:
+    """Left: mean of a signed per-image measure over all references. Right: the selected image's reference."""
+    lim = float(np.nanmax(np.abs(np.r_[g_all.to_numpy(float).ravel(), g_ref.to_numpy(float).ravel()]))) or 1.0
+    fig, axes = plt.subplots(1, 2, figsize=(8.6, 6.2))
+    grid_heatmap(axes[0], g_all, "all references (mean)", lim, highlight, label)
+    grid_heatmap(axes[1], g_ref, f"reference I{ref_id:02d} only", lim, highlight, label)
+    axes[1].set_yticklabels([])
+    fig.suptitle(title, fontsize=9.5)
+    fig.tight_layout()
+    return fig
+
+
+def srcc_grid_figure(tables: dict[str, pd.DataFrame]) -> plt.Figure:
+    """SRCC per distortion type x level, one panel per metric (diverging: blue = agrees with humans, red = inverted)."""
+    fig, axes = plt.subplots(1, len(tables), figsize=(2.3 * len(tables) + 1.5, 6.2), sharey=True)
+    for ax, (name, g) in zip(axes, tables.items()):
+        ax.set_facecolor("#c8c8c8")  # no data: the cell only held pixel-identical pairs
+        im = ax.imshow(g.to_numpy(float), cmap="RdBu", vmin=-1, vmax=1, aspect="auto")
+        ax.set_xticks(range(g.shape[1]), [f"L{c}" for c in g.columns], fontsize=7)
+        ax.set_yticks(range(g.shape[0]), g.index, fontsize=6.5)
+        ax.set_title(LABELS[name], fontsize=9)
+    fig.colorbar(im, ax=axes, fraction=0.02, pad=0.01).set_label("SRCC within cell (81 references)", fontsize=7)
+    fig.text(0.01, 0.01, "gray = no data (cell held only pixel-identical pairs)", fontsize=7)
+    return fig

@@ -60,6 +60,7 @@ Code: @hwupu implements, @ALLEN07056 reviews PRs (D-21).
 ### Doing
 
 ### Review
+- [ ] B-25 five report cases + type × level heatmaps + draft `report/failure_cases_draft.md` (D-25) — A→B, PR `b-25-selected-cases` (stacked on #3)
 - [ ] B-20 main LPIPS → VGG16 (D-23); overall SRCC 0.720 (Alex 0.822, now supplementary) — A→B, PR `b-20-lpips-vgg` (stacked on #1)
 - [ ] B-05 sanity tests (12 tests; found pyiqa SSIM cs-clamp, D-20) — A→B, PR `b-05-sanity-tests`
 
@@ -69,6 +70,7 @@ Code: @hwupu implements, @ALLEN07056 reviews PRs (D-21).
 - 11-02 A: S1 opened. Code review moves to PRs with @ALLEN07056 (D-21, CODEOWNERS). B-05 → Review (P-006). next: B-06.
 - 11-02 A: B-20 → Review (P-007). LPIPS-VGG close to DISTS within types, but weaker across types (color .48, spatial .53). next: B-11/B-12 failure mining (plan approved, D-24).
 - 11-02 A: B-11/B-12 → Review (P-008). 15 + 5 candidates. Findings: SSIM fails systematically on color (color_block 47% of images), PSNR on global brightness (brighten 25%); traditional-vs-learned conflicts all involve a brightness change, and humans split 3:2. next: B-06, B-22, B-09.
+- 11-02 A: B-25 → Review (P-009). @hwupu asked for 5 specific cases (A-1, A-2, B-1, B-2, C-1) + heatmaps + draft report. Found: SSIM's and LPIPS's failures are mostly cross-type calibration (within-type SRCC 0.88 / 0.94 on the failing types); SSIM blind to chroma (verified luma unchanged). Explanations in the draft are hypotheses for B-13.
 
 ## Sprint 2 — Mon 11-09 → Sun 11-15
 

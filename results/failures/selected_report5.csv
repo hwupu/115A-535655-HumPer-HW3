@@ -1,0 +1,6 @@
+,candidate_pos,cross_family,d_learned,d_mos,d_trad,direction,dist_group,dist_i,dist_j,dist_name,fitted,gap,human_sides_with,id,id_i,id_j,level,level_i,level_j,metric,metric_a,metric_b,mos,mos_i,mos_j,mos_var,pair,rank_a,rank_b,rank_metric,rank_mos,ref_id,residual,strength,types
+A-1,1,False,,,,,color,,,color_diffusion,,0.6451300356960734,,I18_04_04,,,4,,,,ssim,ms_ssim,1.4,,,0.611,ssim~ms_ssim,0.7477817440081591,0.10265170831208567,,0.0676185619581846,18,,,
+A-2,1,False,,,,,spatial,,,jitter,,0.4532381438041816,,I38_19_04,,,4,,,,lpips_vgg,dists,1.67,,,0.65,lpips_vgg~dists,0.5453340132585416,0.09209586945436002,,0.13783783783783785,38,,,
+B-1,1,,,,,too_optimistic,color,,,color_diffusion,,0.8231004589495156,,I32_04_02,,,2,,,ssim,,,1.77,,,0.616,,,,0.9838857725650179,0.1607853136155023,32,,,
+B-2,3,,,,,too_optimistic,spatial,,,non_eccentricity_patch,3.7856774080399873,,,I81_20_05,,,5,,,dists,,,1.33,,,0.471,,,,,,81,2.4556774080399872,,
+C-1,1,,-0.7024793388429752,-1.9299999999999997,0.5454545454545454,,,color_saturation_1,contrast_change,,,,learned,,I43_07_05,I43_25_01,,5,1,,,,,1.87,3.8,,,,,,,43,,0.5454545454545454,color_saturation_1 / contrast_change
