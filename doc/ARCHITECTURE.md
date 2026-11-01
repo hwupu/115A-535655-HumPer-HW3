@@ -43,7 +43,7 @@ data/kadid10k/ ──data.py──▶ pairs DataFrame
                      ┌────────┴─────────┐
                      ▼                  ▼
           evaluate.py (02_*)      failures.py (03_*)
-          tables/*.csv, heatmap   figures/failure_*.png
+          tables/*.csv            failures/*.csv, figures/failures/*.png
                      └────────┬─────────┘
                               ▼
                          report/ (PDF)
@@ -59,7 +59,8 @@ Columns: `id, ref_path, dist_path, ref_id, dist_type, dist_name, dist_group, lev
 
 **`metrics.py`**: `MetricSpec(name, pyiqa_name, higher_is_better, family, note)`; `create()` asserts our direction == pyiqa's `lower_better`; `aligned()` flips sign.
 - `PSNR, SSIM, MS-SSIM`: higher = better
-- `LPIPS (alex|vgg), DISTS`: lower = better → negated in `evaluate.py` before correlating
+- `lpips_vgg, dists` (main, both VGG16, D-23) and `lpips_alex` (`EXTRA_METRICS`, supplementary): lower = better → negated by `aligned()` before correlating
+- `METRICS` = main comparison (tables, failure analysis); `ALL_METRICS` = also computed and tested
 
 **`scores.csv`**: one row per distorted image. Columns are the pair columns plus one raw-score column per metric (stored raw, not sign-flipped).
 
@@ -69,11 +70,16 @@ Columns: `id, ref_path, dist_path, ref_id, dist_type, dist_name, dist_group, lev
 - `krcc(x, y)`: Kendall, as an extra
 - `table(scores, by=None | "dist_type")`
 
-**`failures.py`**: converts each metric and the MOS to percentile ranks (direction-aligned), then computes
-- `gap_human[m] = |rank_m − rank_mos|`
-- `gap_pair[a,b] = |rank_a − rank_b|` (traditional vs learned)
+**`failures.py`** (D-24): direction-aligned percentile ranks on the eval set (identical pairs dropped).
+Candidates come only from images with `mos_var` ≤ its 90th percentile.
+- `metric_pairs()`: case A, `gap = |r_a − r_b|` for all 10 metric pairs
+- `vs_human()`: case B, signed `gap = r_m − r_mos` (`too_optimistic` / `too_pessimistic`)
+- `family_pairs()`: case C, same-reference pairs where the traditional and learned family means (within-reference ranks) order two images oppositely; `strength = min(|Δtrad|, |Δlearned|)`, `human_sides_with` ∈ {traditional, learned, tie}
+- `select_diverse(cands, k, score, max_per)`: greedy top-k with caps (per distortion type / reference / metric pair)
+- `systematic()`: share of images per type with |rank gap| > 0.5 (systematic vs isolated); `family_agreement()`: per-reference Kendall τ
 
-It returns the top-k cases, capped at N per distortion type so the selection stays diverse (no cherry-picking).
+**`viz.py`**: `case_figure()` (reference | distorted | |diff| | 1−SSIM map | LPIPS-VGG spatial map, with scores + ranks), `pair_figure()` (case C).
+Outputs: `results/failures/{candidates,selected}_{A,B,C}.csv`, `results/figures/failures/*.png`.
 
 ## 4. Runtime (cross-platform)
 
@@ -102,6 +108,6 @@ It returns the top-k cases, capped at N per distortion type so the selection sta
 3. Within each (ref, dist_type), metric scores move monotonically with distortion level (check with Spearman vs level).
 4. The sign/direction check is applied before PLCC and printed in the notebook. ✔ tested (raw SRCC sign vs `higher_is_better`)
 5. Cross-device: on 20 images, CPU vs MPS (A) and CPU vs CUDA (B) agree to within 1e-3 relative error.
-   ✔ A, 2026-10-30, 40 pairs: traditional metrics identical; LPIPS max 2.5e-6, DISTS max 7.1e-6.
+   ✔ A, 2026-10-30, 40 pairs: traditional metrics identical; LPIPS-Alex max 2.5e-6, DISTS max 7.1e-6.
    ✔ `test_learned_metrics_cpu_vs_accelerator` (skipped on CPU-only machines) and `test_committed_scores_reproduce`
      (recomputes 7 rows of `scores.csv` on CPU; run on WSL to cross-check D-12).

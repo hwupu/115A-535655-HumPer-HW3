@@ -16,6 +16,7 @@ Async daily: add one dated line under *Daily log* (`done / next / blocked`).
 ### Doing
 
 ### Review
+- [ ] B-11 + B-12 failure mining (`failures.py`, `viz.py`, notebook 03, 20 candidate figures) — A→B, PR `b-11-failure-mining` (stacked on #2)
 - [ ] B-03 KADID-10k (HF mirror, D-14), `data.py`, `01_data_check.ipynb`: 10,125 pairs, MOS ↓ with level — A
 - [ ] B-04 `metrics.py` registry + smoke run (40 pairs, CPU vs MPS agree < 1e-5) — A
 - [ ] B-07 (pulled from S1) full run: `results/scores.csv` 10,125 × 5 metrics, MPS, 40 min — A
@@ -54,16 +55,20 @@ Code: @hwupu implements, @ALLEN07056 reviews PRs (D-21).
 - [ ] B-09 heatmap + scatter figures — A→B
 - [ ] B-14 report skeleton, decide D-08 — @ALLEN07056
 - [ ] B-10 interpretation notes — A+B
+- [ ] B-13 (pulled from S2) pick final 6–8 failure cases from `results/figures/failures/` and write explanations — @hwupu + @ALLEN07056 (humans)
 
 ### Doing
 
 ### Review
+- [ ] B-20 main LPIPS → VGG16 (D-23); overall SRCC 0.720 (Alex 0.822, now supplementary) — A→B, PR `b-20-lpips-vgg` (stacked on #1)
 - [ ] B-05 sanity tests (12 tests; found pyiqa SSIM cs-clamp, D-20) — A→B, PR `b-05-sanity-tests`
 
 ### Done
 
 ### Daily log
 - 11-02 A: S1 opened. Code review moves to PRs with @ALLEN07056 (D-21, CODEOWNERS). B-05 → Review (P-006). next: B-06.
+- 11-02 A: B-20 → Review (P-007). LPIPS-VGG close to DISTS within types, but weaker across types (color .48, spatial .53). next: B-11/B-12 failure mining (plan approved, D-24).
+- 11-02 A: B-11/B-12 → Review (P-008). 15 + 5 candidates. Findings: SSIM fails systematically on color (color_block 47% of images), PSNR on global brightness (brighten 25%); traditional-vs-learned conflicts all involve a brightness change, and humans split 3:2. next: B-06, B-22, B-09.
 
 ## Sprint 2 — Mon 11-09 → Sun 11-15
 
