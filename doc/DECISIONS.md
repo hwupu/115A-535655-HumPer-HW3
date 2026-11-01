@@ -24,6 +24,9 @@ A `Proposed` decision needs both members to agree at the next planning/review.
 | D-17 | 2026-10-30 | Traditional metrics on CPU, learned metrics on accelerator (`metrics.device_for`) | pyiqa SSIM casts to float64, which MPS rejects; CPU also gives identical results on macOS/WSL | Proposed | A |
 | D-18 | 2026-10-31 | Keep the 320 pixel-identical pairs (4 per ref: gaussian/motion blur L1, saturation-2 L1, mean-shift L3) in main results; report "excluding identical" as a sensitivity check | They are part of KADID's official set. Excluding them lowers SRCC by about 0.01–0.04 and doesn't change the ranking | Proposed | A |
 | D-19 | 2026-10-31 | If the logistic fit doesn't converge, PLCC falls back to raw (flag `fit_ok=False`) | 2 of 125 per-type fits fail (color_block/psnr, color_saturation_1/ms_ssim); report should footnote this | Proposed | A |
+| D-20 | 2026-11-02 | Keep pyiqa's SSIM as-is (contrast-structure clamped at 0), and say so in the Setup section | Found by B-05 cross-check vs a textbook SSIM; differs ≤2e-3 per image on samples. Impact on SRCC to be measured in B-22 together with downsampling | Proposed | A |
+| D-21 | 2026-11-02 | Branch + PR per ticket; @ALLEN07056 is code reviewer (CODEOWNERS); @hwupu implements code tickets with the AI agent | Requested by @hwupu. Gives a human review gate on AI-written code (DoD) | Proposed | A |
+| D-22 | 2026-11-02 | Treat DISTS as possibly *in-domain* on KADID-10k: verify in Ding et al. (TPAMI 2022) whether its weights were fitted on KADID-10k; if so, footnote it in Results | A metric tuned on the test set has an unfair advantage; affects interpretation, not code | Proposed | A |
 
 ## Template
 

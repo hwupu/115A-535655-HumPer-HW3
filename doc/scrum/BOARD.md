@@ -5,7 +5,7 @@ Async daily: add one dated line under *Daily log* (`done / next / blocked`).
 
 ---
 
-## ▶ Sprint 0 — Fri 10-30 → Sun 11-01 (current)
+## Sprint 0 — Fri 10-30 → Sun 11-01 (closed; open items carried to S1, retro still to fill)
 
 **Goal:** env + data ready; every metric runs on 20 images end-to-end.
 
@@ -40,10 +40,30 @@ Async daily: add one dated line under *Daily log* (`done / next / blocked`).
 
 ---
 
-## Sprint 1 — Mon 11-02 → Sun 11-08
+## ▶ Sprint 1 — Mon 11-02 → Sun 11-08 (current)
 
-**Goal:** all scores computed and validated; SRCC/PLCC tables + per-distortion heatmap.
-Planned: B-05, B-06, B-09, B-10, B-14, B-22 (B-07/B-08 pulled into S0)
+**Goal:** all scores validated; SRCC/PLCC tables + per-distortion heatmap; report skeleton.
+Code: @hwupu implements, @ALLEN07056 reviews PRs (D-21).
+
+### To Do
+- [ ] B-01c (from S0) accept GitHub invite; WSL setup + `uv sync` + `uv run pytest` — @ALLEN07056
+- [ ] B-02 (from S0) GenAI policy check; accept/reject Proposed decisions D-01..D-22 — @ALLEN07056 + @hwupu
+- [ ] Review S0 PR-less commits (B-01, B-03, B-04, B-07, B-08 on `main`) — @ALLEN07056
+- [ ] B-06 monotonicity vs level — A→B
+- [ ] B-22 SSIM variants (downsample, unclamped cs) — A→B
+- [ ] B-09 heatmap + scatter figures — A→B
+- [ ] B-14 report skeleton, decide D-08 — @ALLEN07056
+- [ ] B-10 interpretation notes — A+B
+
+### Doing
+
+### Review
+- [ ] B-05 sanity tests (12 tests; found pyiqa SSIM cs-clamp, D-20) — A→B, PR `b-05-sanity-tests`
+
+### Done
+
+### Daily log
+- 11-02 A: S1 opened. Code review moves to PRs with @ALLEN07056 (D-21, CODEOWNERS). B-05 → Review (P-006). next: B-06.
 
 ## Sprint 2 — Mon 11-09 → Sun 11-15
 

@@ -7,11 +7,11 @@ with the least process that still keeps us honest.
 
 | Who | Machine | Scrum hat | Dev focus |
 |---|---|---|---|
-| **Member A** (@hwupu) | macOS, M2 Pro (MPS) | Product Owner — owns `BACKLOG.md` priority, accepts work | Pipeline: data loading, metric computation, correlations |
-| **Member B** (@ALLEN07056) | Windows + WSL2 Ubuntu (CUDA or CPU) | Scrum Master — keeps `BOARD.md` current, runs ceremonies | Analysis: failure-case mining, figures, report |
+| **Member A** (@hwupu) | macOS, M2 Pro (MPS) | Product Owner — owns `BACKLOG.md` priority, accepts work | Implements code tickets (with AI agent) |
+| **Member B** (@ALLEN07056) | Windows + WSL2 Ubuntu (CUDA or CPU) | Scrum Master — keeps `BOARD.md` current, runs ceremonies | **Code reviewer** for every PR; report & failure-case interpretation |
 | **AI agent** (Claude Code, Codex, …) | — | Not a team member — a tool | Drafts code/docs on request; a human owns every output |
 
-Both members review each other's work. Both write the report's Discussion section.
+@ALLEN07056 reviews all code (D-21). @hwupu reviews B's report text. Both write the failure-case explanations and the Discussion.
 
 ## 2. Cadence
 
@@ -35,8 +35,9 @@ Both members review each other's work. Both write the report's Discussion sectio
 1. Pick an item from **To Do** and put your name on it → **Doing**.
 2. If AI is used: work from `AGENTS.md` context, and log significant prompts in `PROMPT_LOG.md`.
 3. If a non-trivial choice is made (dataset, metric config, formula, threshold) → add an entry to `DECISIONS.md`.
-4. Commit with the item ID in the message, e.g. `B-07: add logistic PLCC`.
-5. Move to **Review**. The other member checks it against the Definition of Done → **Done**.
+4. Work on a branch `b-xx-short-name`. Commit with the item ID in the message, e.g. `B-07: add logistic PLCC`.
+5. Open a PR to `main` (`gh pr create`). `.github/CODEOWNERS` auto-requests @ALLEN07056 → item moves to **Review**.
+6. Reviewer checks the Definition of Done, ideally running `uv run pytest` on WSL, then approves. The author squash-merges → **Done**.
 
 ## 5. Definition of Done
 
@@ -45,7 +46,8 @@ Both members review each other's work. Both write the report's Discussion sectio
 - [ ] Outputs saved under `results/` (CSV/PNG), not only shown in a notebook cell
 - [ ] AI-generated code was read and checked by a human (sanity check written down)
 - [ ] `PROMPT_LOG.md` / `DECISIONS.md` updated if relevant
-- [ ] Reviewed by the other member
+- [ ] `uv run pytest` passes
+- [ ] PR approved by the reviewer
 
 ## 6. AI-native rules
 
@@ -60,7 +62,7 @@ Both members review each other's work. Both write the report's Discussion sectio
 - Repo: **public** at <https://github.com/hwupu/115A-535655-HumPer-HW3> (owner @hwupu; @ALLEN07056 has write access).
 - Public, so never commit secrets/tokens or the dataset (license: research use, not redistributable). WSL member clones into `~/`, not `/mnt/c/`.
 - `.gitattributes` forces LF line endings; WSL member also sets `core.autocrlf input`.
-- Use a single `main` branch with small commits; prefix each message with its backlog ID.
+- `main` only changes via reviewed PRs (one per ticket, squash-merge). Docs-only board updates may go straight to `main`.
 - `data/` and large `results/` artifacts are gitignored; `uv.lock` is committed.
 - Dependency changes go through `uv add` / `uv remove` only, and the commit includes `uv.lock`. The other member runs `uv sync` after pulling.
 - Notebooks: clear heavy outputs before committing, to keep diffs small and avoid merge conflicts. Figures go to `results/figures/`.
