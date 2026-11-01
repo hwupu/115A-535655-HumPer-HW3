@@ -60,4 +60,4 @@ Use the sprint for: team proofreading of `report/report_draft.md`, cutting to �
 ## Release — Mon 11-16 → Tue 11-17 (before class)
 
 **Goal:** submitted.
-Open: B-18 (macOS ✔ 11-02; WSL in report PR review), B-19 PDF + submission — **code freeze Mon 11-16 18:00**. B-21 (stretch) dropped.
+Open: B-18 (macOS ✔ 11-02; WSL in report PR review), B-19 PDF + submission (cut to ≤ 4 pp; add `report/submission_extras.md` contribution statement; verify Background literature numbers; explain DISTS 0.814 vs reported 0.887) — **code freeze Mon 11-16 18:00**. B-21 (stretch) dropped.
