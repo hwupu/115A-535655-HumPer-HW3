@@ -69,3 +69,22 @@ def table(scores: pd.DataFrame, by: str | None = None, metrics: list[str] | None
         for name in names:
             rows.append({by or "subset": key, "metric": name, **correlations(aligned(g, name), g["mos"])})
     return pd.DataFrame(rows)
+
+
+def monotonicity(scores: pd.DataFrame, metrics: list[str] | None = None) -> pd.DataFrame:
+    """B-06: does quality drop as the distortion level rises? For every (reference, type) the five levels
+    should give non-increasing aligned scores. Per type and metric (and MOS):
+      rho   = mean Spearman(level, aligned score) over references; -1 = perfectly monotone
+      share = fraction of (reference, type) series that are non-increasing (ties allowed)."""
+    names = (metrics or [m.name for m in METRICS if m.name in scores]) + ["mos"]
+    vals = pd.DataFrame({n: aligned(scores, n) if n != "mos" else scores["mos"] for n in names})
+    vals[["ref_id", "dist_name", "level"]] = scores[["ref_id", "dist_name", "level"]]
+    vals = vals.sort_values(["ref_id", "dist_name", "level"])
+    rows = []
+    for (ref, dist), g in vals.groupby(["ref_id", "dist_name"], sort=False):
+        for n in names:
+            v = g[n].to_numpy()
+            rho = stats.spearmanr(g["level"], v).statistic if np.ptp(v) > 0 else np.nan
+            rows.append({"dist_name": dist, "metric": n, "rho": rho, "monotone": bool(np.all(np.diff(v) <= 1e-12))})
+    df = pd.DataFrame(rows)
+    return df.groupby(["dist_name", "metric"]).agg(rho=("rho", "mean"), share=("monotone", "mean")).reset_index()

@@ -144,3 +144,47 @@ def test_identical_pairs_are_the_known_320(scores):
     assert set(ident.dist_name) == {"gaussian_blur", "motion_blur", "color_saturation_2", "mean_shift"}
     np.testing.assert_allclose(ident[["ssim", "ms_ssim"]], 1.0, atol=1e-6)
     np.testing.assert_allclose(ident[["lpips_vgg", "lpips_alex", "dists"]], 0.0, atol=1e-6)
+
+
+@needs_data
+@needs_scores
+def test_ssim_variants_match_pyiqa(sample):
+    """B-22: our variant code reproduces pyiqa SSIM (clamped, no downsampling) and pyiqa's downsample=True."""
+    from pyiqa.archs.ssim_arch import ssim as pyiqa_ssim
+    from pyiqa.utils.color_util import to_y_channel
+
+    from humper.ssim_variants import luma255, ssim
+
+    rows, dist, ref = sample
+    for i in range(1, len(rows)):  # skip the identical pair
+        x, y = luma255(ref[i]), luma255(dist[i])
+        assert ssim(x, y) == pytest.approx(rows.ssim[i], abs=1e-5), rows.id[i]
+        yd, yr = (to_y_channel(t[None], 255, "yiq").double() for t in (dist[i], ref[i]))
+        want = float(pyiqa_ssim(yd, yr, data_range=255, downsample=True))
+        assert ssim(x, y, down=True) == pytest.approx(want, abs=1e-4), rows.id[i]
+
+
+@needs_data
+@needs_scores
+def test_ms_ssim_scales_reproduce_pyiqa(sample):
+    """The scale-by-scale MS-SSIM used for figures multiplies back to the committed pyiqa MS-SSIM."""
+    from humper.ssim_variants import luma255, ms_ssim_scales
+
+    rows, dist, ref = sample
+    for i in range(1, len(rows)):
+        sc = ms_ssim_scales(luma255(ref[i]), luma255(dist[i]))
+        assert np.prod([d["mean"] ** d["weight"] for d in sc]) == pytest.approx(rows.ms_ssim[i], abs=1e-5), rows.id[i]
+
+
+@needs_data
+@needs_scores
+def test_explanation_views_add_up_to_scores(sample):
+    """B-27: the case-figure views are decompositions of the metrics, not illustrations."""
+    from humper.explain import dists_stages, lpips_layers, ssim_map
+
+    rows, dist, ref = sample
+    for i in [1, 4]:
+        tex, st = dists_stages(ref[i], dist[i])
+        assert tex.sum() + st.sum() == pytest.approx(rows.dists[i], rel=1e-3), rows.id[i]
+        assert lpips_layers(ref[i], dist[i]).sum() == pytest.approx(rows.lpips_vgg[i], rel=1e-3), rows.id[i]
+        assert ssim_map(ref[i], dist[i]).mean() == pytest.approx(rows.ssim[i], abs=1e-5), rows.id[i]

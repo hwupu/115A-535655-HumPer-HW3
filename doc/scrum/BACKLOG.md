@@ -33,7 +33,9 @@ Size: **S** ≤ 2h, **M** ≈ half day, **L** ≈ 1 day. Rubric points in bracke
 | B-18 | Clean-clone reproduction test on **both** macOS and WSL; README up to date | S | Rel | A+B | Repro [15] |
 | B-19 | Page check (≤4 pp), proofread, submit PDF + code | S | Rel | A+B | Clarity [10] |
 | B-25 | Report cases: top-1 for A-1 (SSIM~MS-SSIM), A-2 (LPIPS~DISTS), B-1 (rank/SRCC view), B-2 (logistic residual/PLCC view), C-1 (SSIM vs LPIPS ranking); type × level heatmaps; draft of report §3–§4 (D-25) | M | S1 | A→B | Failure [20] |
+| B-26 | Full report draft (`report/report_draft.md`: §1–§5, contribution, GenAI disclosure) + B-06/B-09/B-22 code; approval closes all tickets (D-26) | L | S1 | A→B | All |
+| B-27 | Case-specific failure figures: show only the views of the compared metrics (luma/chroma split, SSIM/MS-SSIM maps, LPIPS map, LPIPS/DISTS per-stage decomposition); report §4 updated (D-27) | S | S1 | A→B | Failure [20] |
 | B-22 | SSIM variants: original auto-downsampling (`downsample=True`) and unclamped cs (D-20). Our SRCC 0.62 is below commonly reported values. Decide which to report | S | S1 | A→B | Impl [15] |
 | **Stretch** |||||
 | B-20 | ~~Stretch~~ → S1: switch main LPIPS to VGG16 (D-23); keep AlexNet as supplementary | S | S1 | A→B | Impl [15] |
-| B-21 | Repeat the key results on TID2013 subset for robustness | L | — | — | — |
+| B-21 | ~~Repeat the key results on TID2013 subset for robustness~~ dropped (time) | L | — | — | — |

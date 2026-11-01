@@ -76,7 +76,7 @@ VS Code users can open the repo with the *Remote - WSL* extension and pick the `
 ```
 src/humper/    reusable code (device, data, metrics, evaluate, failures, viz)
 scripts/       long-running jobs
-notebooks/     01_data_check, 02_correlation, 03_failure_cases, 04_selected_cases
+notebooks/     01_data_check, 02_correlation, 03_failure_cases, 04_selected_cases, 05_quant_figures
 tests/         sanity checks
 data/          dataset (gitignored)
 results/       scores.csv, tables/, figures/
