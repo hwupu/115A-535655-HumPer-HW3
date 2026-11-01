@@ -36,7 +36,7 @@ LPIPS-VGG and DISTS share the same VGG16 backbone, so differences between them c
 - LPIPS and DISTS receive RGB.
 - Scoring all pairs took 40 min on an M2 Pro: deep metrics on MPS, traditional metrics on CPU (D-17).
 
-**Correctness checks** (`tests/`, 22 tests):
+**Correctness checks** (`tests/`, 23 tests):
 - An identical pair gets the perfect score.
 - PSNR matches `skimage` within 5e-5 dB.
 - SSIM matches a textbook implementation (which itself matches `skimage` to 1e-6), apart from one documented difference: pyiqa clamps a negative contrast-structure term to 0 (D-20, effect quantified in §3).
@@ -142,6 +142,7 @@ Full candidate lists: `results/failures/candidates_{A,B,C}.csv`. Selection: `res
 
 ![SRCC by type](../results/figures/quant/srcc_by_type.png)
 ![SRCC by type and level](../results/figures/selected/srcc_type_level.png)
+*SRCC inside each (distortion type, level) cell, 81 images per cell. x-axis: distortion level L1 (mildest) … L5 (strongest).*
 
 **Interpretation (draft, B-10):**
 1. **No metric wins everywhere.** MS-SSIM has the best overall SRCC (0.826) and wins 5 of 7 groups. DISTS wins blur and PSNR wins brightness. On blur, compression, and sharpness/contrast every metric is within 0.08 of the best.
@@ -170,6 +171,8 @@ Full candidate lists: `results/failures/candidates_{A,B,C}.csv`. Selection: `res
 
 ## 4. Failure Cases
 
+**Reading the heatmaps:** the x-axis L1–L5 is the KADID-10k distortion level, from 1 (mildest) to 5 (strongest). The exceptions are mean shift and contrast change, whose levels go in both directions around the reference (mean-shift L3 = no change). Gray cells hold only pixel-identical pairs.
+
 Each case shows a figure (reference | distorted | |diff| | 1−SSIM map | LPIPS-VGG map, with scores and global ranks $r$) and a heatmap. The heatmap's left panel is the case's signed score averaged per (type, level) cell over all references; the right panel is the selected image's reference; the black box marks the selected image.
 
 Each case shows a figure (reference | distorted | |diff| | 1−SSIM map | LPIPS-VGG map, with scores and global ranks) and a heatmap. The heatmap's left panel is the case's signed score averaged per cell over all references; the right panel is the selected image's reference. The black box marks the selected image.
@@ -178,6 +181,8 @@ Each case shows a figure (reference | distorted | |diff| | 1−SSIM map | LPIPS-
 
 ![A-1](../results/figures/selected/A-1_images.png)
 ![A-1 heatmap](../results/figures/selected/A-1_heatmap.png)
+![A-1 MS-SSIM scales](../results/figures/selected/A-1_msssim_scales.png)
+*MS-SSIM scale by scale. Row 1: the original image at each scale. Row 2: where MS-SSIM sees damage. The sun halo and the rock/sky edge become dominant at scales 3–5, where the weights are largest.*
 
 | | PSNR | SSIM | MS-SSIM | LPIPS-VGG | DISTS | MOS |
 |---|---|---|---|---|---|---|
@@ -212,6 +217,8 @@ Each case shows a figure (reference | distorted | |diff| | 1−SSIM map | LPIPS-
 
 ![B-1](../results/figures/selected/B-1_images.png)
 ![B-1 heatmap](../results/figures/selected/B-1_heatmap.png)
+![B-1 MS-SSIM scales](../results/figures/selected/B-1_msssim_scales.png)
+*MS-SSIM scale by scale: the damage is below 0.05 at every scale (note the colour-bar range). No scale sees the yellow cast, because it is in chroma.*
 
 | | PSNR | SSIM | MS-SSIM | LPIPS-VGG | DISTS | MOS |
 |---|---|---|---|---|---|---|

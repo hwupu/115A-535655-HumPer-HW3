@@ -162,3 +162,15 @@ def test_ssim_variants_match_pyiqa(sample):
         yd, yr = (to_y_channel(t[None], 255, "yiq").double() for t in (dist[i], ref[i]))
         want = float(pyiqa_ssim(yd, yr, data_range=255, downsample=True))
         assert ssim(x, y, down=True) == pytest.approx(want, abs=1e-4), rows.id[i]
+
+
+@needs_data
+@needs_scores
+def test_ms_ssim_scales_reproduce_pyiqa(sample):
+    """The scale-by-scale MS-SSIM used for figures multiplies back to the committed pyiqa MS-SSIM."""
+    from humper.ssim_variants import luma255, ms_ssim_scales
+
+    rows, dist, ref = sample
+    for i in range(1, len(rows)):
+        sc = ms_ssim_scales(luma255(ref[i]), luma255(dist[i]))
+        assert np.prod([d["mean"] ** d["weight"] for d in sc]) == pytest.approx(rows.ms_ssim[i], abs=1e-5), rows.id[i]

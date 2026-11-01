@@ -83,6 +83,11 @@ def pair_figure(row_i: pd.Series, row_j: pd.Series, note: str = "") -> plt.Figur
     return fig
 
 
+LEVEL_LABEL = "distortion level: L1 = mildest … L5 = strongest"
+LEVEL_FOOTNOTE = ("L1–L5 = KADID-10k distortion levels (1 = mildest, 5 = strongest). Exceptions: mean_shift and contrast_change "
+                  "levels go in both directions around the reference (mean_shift L3 = no change), so they are not a severity order.")
+
+
 def grid_heatmap(ax: plt.Axes, g: pd.DataFrame, title: str, lim: float, highlight=(), cbar_label: str = "") -> None:
     """One distortion-type x level grid on a diverging blue-red scale centred at 0.
     `highlight` = [(dist_name, level), ...] cells outlined in black (the selected images).
@@ -92,6 +97,7 @@ def grid_heatmap(ax: plt.Axes, g: pd.DataFrame, title: str, lim: float, highligh
     ax.set_xticks(range(g.shape[1]), [f"L{c}" for c in g.columns], fontsize=7)
     ax.set_yticks(range(g.shape[0]), g.index, fontsize=6.5)
     ax.set_title(title, fontsize=8.5)
+    ax.set_xlabel(LEVEL_LABEL, fontsize=7)
     for name, level in highlight:
         y, x = list(g.index).index(name), list(g.columns).index(level)
         ax.add_patch(plt.Rectangle((x - 0.5, y - 0.5), 1, 1, fill=False, lw=2, ec="black"))
@@ -106,7 +112,8 @@ def case_heatmaps(g_all: pd.DataFrame, g_ref: pd.DataFrame, ref_id: int, highlig
     grid_heatmap(axes[1], g_ref, f"reference I{ref_id:02d} only", lim, highlight, label)
     axes[1].set_yticklabels([])
     fig.suptitle(title, fontsize=9.5)
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0.04, 1, 1))
+    fig.text(0.01, 0.005, LEVEL_FOOTNOTE + "\nGray = no data (only pixel-identical pairs in that cell).", fontsize=6.5, wrap=True)
     return fig
 
 
@@ -119,8 +126,9 @@ def srcc_grid_figure(tables: dict[str, pd.DataFrame]) -> plt.Figure:
         ax.set_xticks(range(g.shape[1]), [f"L{c}" for c in g.columns], fontsize=7)
         ax.set_yticks(range(g.shape[0]), g.index, fontsize=6.5)
         ax.set_title(LABELS[name], fontsize=9)
+        ax.set_xlabel("level (L1 mild → L5 strong)", fontsize=7)
     fig.colorbar(im, ax=axes, fraction=0.02, pad=0.01).set_label("SRCC within cell (81 references)", fontsize=7)
-    fig.text(0.01, 0.01, "gray = no data (cell held only pixel-identical pairs)", fontsize=7)
+    fig.text(0.01, -0.03, LEVEL_FOOTNOTE + "\nGray = no data (cell held only pixel-identical pairs).", fontsize=7)
     return fig
 
 
@@ -169,4 +177,36 @@ def type_heatmap(srcc_by_type: pd.DataFrame) -> plt.Figure:
             ax.text(x, y, f"{v:.2f}", ha="center", va="center", fontsize=6.5, color="white" if abs(v) > 0.6 else "black")
     fig.colorbar(im, ax=ax, fraction=0.05, pad=0.02).set_label("SRCC within distortion type (405 images)", fontsize=7)
     fig.tight_layout()
+    return fig
+
+
+def msssim_scales_figure(row: pd.Series, title: str = "") -> plt.Figure:
+    """MS-SSIM scale by scale. Row 1: the original (reference) image at each scale (2x2 average pooling
+    between scales). Row 2: the map MS-SSIM uses at that scale for the distorted image, shown as damage
+    (1 - cs; 1 - SSIM at scale 5), with its mean, weight and factor mean**weight.
+    MS-SSIM = product of the factors."""
+    import torch.nn.functional as F
+
+    from humper.ssim_variants import luma255, ms_ssim_scales
+
+    ref, dist = load_image(row["ref_path"]), load_image(row["dist_path"])
+    scales = ms_ssim_scales(luma255(ref), luma255(dist))
+    vmax = max(float((1 - d["map"]).max()) for d in scales) or 1.0
+    fig, axes = plt.subplots(2, len(scales), figsize=(3.0 * len(scales), 5.0))
+    rgb = ref[None]
+    for k, d in enumerate(scales):
+        h, w = d["x"].shape
+        axes[0, k].imshow(rgb[0].permute(1, 2, 0).numpy(), interpolation="nearest")
+        axes[0, k].set_title(f"scale {d['scale']}: {w}×{h} px" + (" (SSIM's only scale)" if k == 0 else ""), fontsize=8)
+        im = axes[1, k].imshow(1 - d["map"], cmap="magma", vmin=0, vmax=vmax, interpolation="nearest")
+        term = "cs" if k < len(scales) - 1 else "l·cs"
+        axes[1, k].set_title(f"mean {term} = {d['mean']:.3f}, weight w = {d['weight']:.3f}\nfactor ({term})^w = {d['mean'] ** d['weight']:.3f}", fontsize=7.5)
+        rgb = F.avg_pool2d(rgb, 2)
+        for ax in axes[:, k]:
+            ax.axis("off")
+    axes[0, 0].text(-0.08, 0.5, "original (reference)", transform=axes[0, 0].transAxes, rotation=90, va="center", ha="right", fontsize=9)
+    axes[1, 0].text(-0.08, 0.5, "MS-SSIM damage map (1 − cs)", transform=axes[1, 0].transAxes, rotation=90, va="center", ha="right", fontsize=9)
+    fig.colorbar(im, ax=axes[1, :], fraction=0.015, pad=0.01).set_label("damage (0 = identical)", fontsize=7)
+    head = f"{row['id']} ({row['dist_name']}, L{row['level']}): MS-SSIM {row['ms_ssim']:.3f} = product of factors; SSIM {row['ssim']:.3f}; MOS {row['mos']:.2f}"
+    fig.suptitle((title + "\n" if title else "") + head, fontsize=9.5)
     return fig
