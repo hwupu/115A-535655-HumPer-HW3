@@ -17,7 +17,7 @@ class MetricSpec:
 
 METRICS = [
     MetricSpec("psnr", "psnr", True, "traditional", "pixel MSE on RGB, capped at 80 dB"),
-    MetricSpec("ssim", "ssim", True, "traditional", "luminance/contrast/structure on Y channel"),
+    MetricSpec("ssim", "ssim", True, "traditional", "luminance/contrast/structure on YIQ luma; pyiqa clamps cs >= 0 (D-20)"),
     MetricSpec("ms_ssim", "ms_ssim", True, "traditional", "SSIM over 5 scales on Y channel"),
     MetricSpec("lpips", "lpips", False, "learned", "AlexNet feature distance, v0.1 linear weights"),
     MetricSpec("dists", "dists", False, "learned", "VGG structure + texture (mean/var) similarity"),

@@ -94,9 +94,14 @@ It returns the top-k cases, capped at N per distortion type so the selection sta
 
 ## 5. Correctness checks (rubric: "correct implementation", 15 pts)
 
-1. Identical image pair: PSNR = 80 (the `pyiqa` cap; verified 2026-10-30), SSIM = 1, LPIPS ≈ 0, DISTS ≈ 0.
+1. Identical image pair: PSNR = 80 (the `pyiqa` cap; verified 2026-10-30), SSIM = 1, LPIPS ≈ 0, DISTS ≈ 0. ✔ tested
 2. `pyiqa` PSNR/SSIM match `skimage.metrics` on a few images. Record whether metrics use the Y channel or RGB.
+   ✔ `tests/test_sanity.py` (7 real pairs): PSNR = skimage within 5e-5 dB (RGB). SSIM uses YIQ luma (0.299R+0.587G+0.114B, ×255, rounded).
+   **Deviation (D-20):** pyiqa clamps the contrast-structure term at 0 (`F.relu(cs_map)`), unlike Wang et al. 2004 / skimage.
+   This changes SSIM only where local structure is anti-correlated (jitter: −1.9e-3, JPEG: −2.4e-4 on the samples).
 3. Within each (ref, dist_type), metric scores move monotonically with distortion level (check with Spearman vs level).
-4. The sign/direction check is applied before PLCC and printed in the notebook.
+4. The sign/direction check is applied before PLCC and printed in the notebook. ✔ tested (raw SRCC sign vs `higher_is_better`)
 5. Cross-device: on 20 images, CPU vs MPS (A) and CPU vs CUDA (B) agree to within 1e-3 relative error.
    ✔ A, 2026-10-30, 40 pairs: traditional metrics identical; LPIPS max 2.5e-6, DISTS max 7.1e-6.
+   ✔ `test_learned_metrics_cpu_vs_accelerator` (skipped on CPU-only machines) and `test_committed_scores_reproduce`
+     (recomputes 7 rows of `scores.csv` on CPU; run on WSL to cross-check D-12).
