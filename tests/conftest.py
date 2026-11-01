@@ -3,7 +3,7 @@ import pytest
 import torch
 
 from humper.data import KADID_ROOT, REPO_ROOT, load_image
-from humper.metrics import METRICS, create
+from humper.metrics import ALL_METRICS, create
 
 SCORES_CSV = REPO_ROOT / "results" / "scores.csv"
 
@@ -30,4 +30,4 @@ def sample(scores) -> tuple[pd.DataFrame, torch.Tensor, torch.Tensor]:
 
 @pytest.fixture(scope="session")
 def cpu_models() -> dict:
-    return {m.name: create(m, torch.device("cpu")) for m in METRICS}
+    return {m.name: create(m, torch.device("cpu")) for m in ALL_METRICS}

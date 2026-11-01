@@ -4,7 +4,7 @@ NYCU 535655 *Human Perceptual-Centric Vision and Multimodal Representation Learn
 Repo: <https://github.com/hwupu/115A-535655-HumPer-HW3>  
 Due **Tue 2026-11-17, before class**. Spec: [`doc/references/HW3.pdf`](doc/references/HW3.pdf).
 
-We evaluate PSNR, SSIM, MS-SSIM, LPIPS and DISTS against human MOS on KADID-10k. We report SRCC/PLCC overall and per distortion type, then analyse cases where metrics disagree with humans or with each other.
+We evaluate PSNR, SSIM, MS-SSIM, LPIPS (VGG16) and DISTS (VGG16) against human MOS on KADID-10k. The two learned metrics share a backbone, so their comparison is about the formula (D-23); LPIPS-AlexNet is kept as a supplementary column. We report SRCC/PLCC overall and per distortion type, then analyse cases where metrics disagree with humans or with each other.
 
 ## Setup
 

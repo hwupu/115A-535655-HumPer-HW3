@@ -8,7 +8,7 @@ from scipy.ndimage import gaussian_filter
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 
 from humper import get_device
-from humper.metrics import BY_NAME, METRICS, create, score
+from humper.metrics import ALL_METRICS, BY_NAME, METRICS, create, score
 
 # --- configuration we report in the Setup section (D-15) ---------------------------------
 
@@ -21,13 +21,14 @@ def test_reported_pyiqa_configs():
     assert C["ssim"]["metric_opts"]["test_y_channel"] is True    # SSIM on luma
     assert C["ssim"]["metric_opts"]["downsample"] is False       # no MATLAB auto-downsampling (see B-22)
     assert C["ms_ssim"]["metric_opts"]["test_y_channel"] is True
-    assert C["lpips"]["metric_opts"]["net"] == "alex"
-    assert C["lpips"]["metric_opts"]["version"] == "0.1"
+    assert C["lpips-vgg"]["metric_opts"]["net"] == "vgg"            # main LPIPS: same backbone as DISTS (D-23)
+    assert C["lpips-vgg"]["metric_opts"]["version"] == "0.1"
+    assert C["lpips"]["metric_opts"]["net"] == "alex"               # supplementary lpips_alex
 
 
 def test_direction_matches_pyiqa(cpu_models):
     """`create` asserts this too; listed here so it shows up in the test report."""
-    for m in METRICS:
+    for m in ALL_METRICS:
         assert cpu_models[m.name].lower_better == (not m.higher_is_better)
 
 
@@ -38,7 +39,7 @@ def test_direction_matches_pyiqa(cpu_models):
 @needs_scores
 def test_identical_pair_gives_perfect_score(cpu_models, sample):
     _, _, ref = sample
-    perfect = {"psnr": 80.0, "ssim": 1.0, "ms_ssim": 1.0, "lpips": 0.0, "dists": 0.0}
+    perfect = {"psnr": 80.0, "ssim": 1.0, "ms_ssim": 1.0, "lpips_vgg": 0.0, "lpips_alex": 0.0, "dists": 0.0}
     for name, expected in perfect.items():
         got = score(cpu_models[name], ref, ref)
         np.testing.assert_allclose(got, expected, atol=1e-5, err_msg=name)
@@ -101,7 +102,7 @@ def test_ssim_matches_reference(cpu_models, sample):
 def test_learned_metrics_cpu_vs_accelerator(cpu_models, sample):
     _, dist, ref = sample
     device = get_device()
-    for name in ["lpips", "dists"]:
+    for name in ["lpips_vgg", "lpips_alex", "dists"]:
         accel = score(create(BY_NAME[name], device), dist, ref)
         cpu = score(cpu_models[name], dist, ref)
         np.testing.assert_allclose(accel, cpu, rtol=1e-3, atol=1e-5, err_msg=f"{name} on {device}")
@@ -112,7 +113,7 @@ def test_learned_metrics_cpu_vs_accelerator(cpu_models, sample):
 def test_committed_scores_reproduce(cpu_models, sample):
     """Recompute a few rows of results/scores.csv on this machine (CPU). Run on WSL to cross-check D-12."""
     rows, dist, ref = sample
-    for m in METRICS:
+    for m in ALL_METRICS:
         got = score(cpu_models[m.name], dist, ref).numpy()
         tol = dict(rtol=1e-5) if m.family == "traditional" else dict(rtol=1e-3, atol=1e-5)
         np.testing.assert_allclose(got, rows[m.name].to_numpy(), **tol, err_msg=m.name)
@@ -124,13 +125,13 @@ def test_committed_scores_reproduce(cpu_models, sample):
 @needs_scores
 def test_scores_complete(scores):
     assert len(scores) == 10125
-    assert scores[[m.name for m in METRICS]].notna().all().all()
+    assert scores[[m.name for m in ALL_METRICS]].notna().all().all()
 
 
 @needs_scores
 def test_raw_correlation_sign_matches_direction(scores):
     """Check 4: before alignment, distances correlate negatively with MOS, similarities positively."""
-    for m in METRICS:
+    for m in ALL_METRICS:
         rho = scores[m.name].corr(scores["mos"], method="spearman")
         assert (rho > 0) == m.higher_is_better, (m.name, rho)
 
@@ -142,4 +143,4 @@ def test_identical_pairs_are_the_known_320(scores):
     assert len(ident) == 320
     assert set(ident.dist_name) == {"gaussian_blur", "motion_blur", "color_saturation_2", "mean_shift"}
     np.testing.assert_allclose(ident[["ssim", "ms_ssim"]], 1.0, atol=1e-6)
-    np.testing.assert_allclose(ident[["lpips", "dists"]], 0.0, atol=1e-6)
+    np.testing.assert_allclose(ident[["lpips_vgg", "lpips_alex", "dists"]], 0.0, atol=1e-6)
