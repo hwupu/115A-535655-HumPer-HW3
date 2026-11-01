@@ -210,3 +210,112 @@ def msssim_scales_figure(row: pd.Series, title: str = "") -> plt.Figure:
     head = f"{row['id']} ({row['dist_name']}, L{row['level']}): MS-SSIM {row['ms_ssim']:.3f} = product of factors; SSIM {row['ssim']:.3f}; MOS {row['mos']:.2f}"
     fig.suptitle((title + "\n" if title else "") + head, fontsize=9.5)
     return fig
+
+
+# --- B-27: case-specific explanation figures (show only what the compared metrics look at) ---------
+
+PANEL_INFO = {
+    "rgb_diff": ("|RGB diff| — what PSNR averages", "rgb"),
+    "luma": ("|ΔY| luma — all SSIM/MS-SSIM see", "yiq"),
+    "chroma": ("|ΔIQ| chroma — invisible to SSIM/MS-SSIM", "yiq"),
+    "ssim": ("1 − SSIM map (11×11 window)", "ssim"),
+    "msssim": ("1 − MS-SSIM map (5 scales, weighted)", "ssim"),
+    "lpips": ("LPIPS-VGG map (per-pixel distance)", "lpips"),
+}
+
+
+def _panel_data(kind: str, ref: torch.Tensor, dist: torch.Tensor) -> np.ndarray:
+    from humper import explain as X
+
+    if kind == "rgb_diff":
+        return (dist - ref).abs().mean(0).numpy() * 255
+    if kind in ("luma", "chroma"):
+        return X.luma_chroma_diff(ref, dist)[0 if kind == "luma" else 1]
+    if kind == "ssim":
+        return 1 - X.ssim_map(ref, dist)
+    if kind == "msssim":
+        return 1 - X.msssim_map(ref, dist)
+    if kind == "lpips":
+        return X.lpips_map(ref, dist)
+    raise ValueError(kind)
+
+
+def _stage_bars(ax: plt.Axes, ref: torch.Tensor, dist: torch.Tensor, which=("lpips", "dists")) -> None:
+    """Per-VGG-stage contributions; each metric's bars sum to its score. DISTS split into texture
+    (global feature means) and structure (global feature correlations)."""
+    from humper import explain as X
+
+    x = np.arange(len(X.STAGES))
+    wbar = 0.38
+    if "lpips" in which:
+        lp = np.r_[np.nan, X.lpips_layers(ref, dist)]
+        ax.bar(x - wbar / 2 if "dists" in which else x, lp, wbar, color="#2a78d6", label=f"LPIPS-VGG (sum {np.nansum(lp):.3f})")
+    if "dists" in which:
+        tex, st = X.dists_stages(ref, dist)
+        xs = x + wbar / 2 if "lpips" in which else x
+        ax.bar(xs, tex, wbar, color="#eb6834", label=f"DISTS texture (sum {tex.sum():.3f})")
+        ax.bar(xs, st, wbar, bottom=tex, color="#1baf7a", label=f"DISTS structure (sum {st.sum():.3f})")
+    ax.set_xticks(x, X.STAGES, fontsize=7, rotation=30, ha="right")
+    ax.tick_params(axis="y", labelsize=7)
+    ax.set_ylabel("contribution to score", fontsize=7)
+    ax.set_title("VGG16 stage contributions (bars sum to the score)", fontsize=8)
+    ax.legend(fontsize=6.5, frameon=False)
+    ax.grid(axis="y", alpha=0.2)
+
+
+def explain_figure(row: pd.Series, panels: list[str], title: str = "", ranks: pd.Series | None = None) -> plt.Figure:
+    """reference | distorted | the maps named in `panels` (+ "stages" = per-stage bar chart).
+    Maps in the same group (e.g. luma/chroma, or SSIM/MS-SSIM) share one colour scale, so they compare."""
+    ref, dist = load_image(row["ref_path"]), load_image(row["dist_path"])
+    maps_ = {k: _panel_data(k, ref, dist) for k in panels if k != "stages"}
+    vmax = {}
+    for k, m in maps_.items():
+        g = PANEL_INFO[k][1]
+        vmax[g] = max(vmax.get(g, 0), float(np.percentile(m, 99.5)) or 1e-6)
+    n = 2 + len(panels)
+    widths = [1] * (n - 1) + [1.35 if "stages" in panels else 1]
+    fig, axes = plt.subplots(1, n, figsize=(3.0 * sum(widths), 3.3), gridspec_kw={"width_ratios": widths})
+    axes[0].imshow(ref.permute(1, 2, 0).numpy()); axes[0].set_title("reference", fontsize=8.5)
+    axes[1].imshow(dist.permute(1, 2, 0).numpy()); axes[1].set_title(f"{row['id']} ({row['dist_name']}, L{row['level']})", fontsize=8.5)
+    for ax, k in zip(axes[2:], panels):
+        if k == "stages":
+            _stage_bars(ax, ref, dist)
+            continue
+        im = ax.imshow(maps_[k], cmap="magma", vmin=0, vmax=vmax[PANEL_INFO[k][1]])
+        ax.set_title(f"{PANEL_INFO[k][0]}\nmean {maps_[k].mean():.3g}", fontsize=7.5)
+        fig.colorbar(im, ax=ax, fraction=0.035, pad=0.02).ax.tick_params(labelsize=6)
+    for ax in axes[: n - (1 if "stages" in panels else 0)]:
+        ax.axis("off")
+    fig.suptitle((title + "\n" if title else "") + _score_line(row, ranks), fontsize=8.5, y=1.04)
+    fig.tight_layout()
+    return fig
+
+
+def explain_pair_figure(row_i: pd.Series, row_j: pd.Series, panels: list[str], note: str = "") -> plt.Figure:
+    """Case C: one row per distorted image (i, j of the same reference): distorted | maps.
+    Both rows share colour scales, so the two images compare directly."""
+    ref = load_image(row_i["ref_path"])
+    rows = [(r, load_image(r["dist_path"])) for r in (row_i, row_j)]
+    data = [{k: _panel_data(k, ref, d) for k in panels} for _, d in rows]
+    vmax = {}
+    for dct in data:
+        for k, m in dct.items():
+            g = PANEL_INFO[k][1]
+            vmax[g] = max(vmax.get(g, 0), float(np.percentile(m, 99.5)) or 1e-6)
+    fig, axes = plt.subplots(2, 1 + len(panels), figsize=(3.0 * (1 + len(panels)), 5.0))
+    for r_idx, ((r, d), dct) in enumerate(zip(rows, data)):
+        axes[r_idx, 0].imshow(d.permute(1, 2, 0).numpy())
+        name = "i" if r_idx == 0 else "j"
+        scores = "  ".join(f"{LABELS[m.name]} {r[m.name]:.3g}" for m in METRICS)
+        axes[r_idx, 0].set_title(f"{name}: {r['id']} ({r['dist_name']}, L{r['level']})\nMOS {r['mos']:.2f}", fontsize=8)
+        axes[r_idx, 0].text(0, -0.04, scores, transform=axes[r_idx, 0].transAxes, fontsize=6.5, va="top")
+        for c_idx, k in enumerate(panels, start=1):
+            im = axes[r_idx, c_idx].imshow(dct[k], cmap="magma", vmin=0, vmax=vmax[PANEL_INFO[k][1]])
+            axes[r_idx, c_idx].set_title(f"{PANEL_INFO[k][0]}\nmean {dct[k].mean():.3g}", fontsize=7.5)
+            fig.colorbar(im, ax=axes[r_idx, c_idx], fraction=0.035, pad=0.02).ax.tick_params(labelsize=6)
+    for ax in axes.ravel():
+        ax.axis("off")
+    if note:
+        fig.suptitle(note, fontsize=9)
+    fig.tight_layout()
+    return fig

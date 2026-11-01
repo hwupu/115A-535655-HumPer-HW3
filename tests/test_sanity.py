@@ -174,3 +174,17 @@ def test_ms_ssim_scales_reproduce_pyiqa(sample):
     for i in range(1, len(rows)):
         sc = ms_ssim_scales(luma255(ref[i]), luma255(dist[i]))
         assert np.prod([d["mean"] ** d["weight"] for d in sc]) == pytest.approx(rows.ms_ssim[i], abs=1e-5), rows.id[i]
+
+
+@needs_data
+@needs_scores
+def test_explanation_views_add_up_to_scores(sample):
+    """B-27: the case-figure views are decompositions of the metrics, not illustrations."""
+    from humper.explain import dists_stages, lpips_layers, ssim_map
+
+    rows, dist, ref = sample
+    for i in [1, 4]:
+        tex, st = dists_stages(ref[i], dist[i])
+        assert tex.sum() + st.sum() == pytest.approx(rows.dists[i], rel=1e-3), rows.id[i]
+        assert lpips_layers(ref[i], dist[i]).sum() == pytest.approx(rows.lpips_vgg[i], rel=1e-3), rows.id[i]
+        assert ssim_map(ref[i], dist[i]).mean() == pytest.approx(rows.ssim[i], abs=1e-5), rows.id[i]

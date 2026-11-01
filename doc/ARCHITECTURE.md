@@ -87,7 +87,9 @@ Candidates come only from images with `mos_var` ≤ its 90th percentile.
 - `select_diverse(cands, k, score, max_per)`: greedy top-k with caps (per distortion type / reference / metric pair)
 - `systematic()`: share of images per type with |rank gap| > 0.5 (systematic vs isolated); `family_agreement()`: per-reference Kendall τ
 
-**`viz.py`**: `case_figure()` (reference | distorted | |diff| | 1−SSIM map | LPIPS-VGG spatial map, with scores + ranks), `pair_figure()` (case C), `case_heatmaps()` (type × level, all refs vs one ref), `srcc_grid_figure()` (SRCC per type × level per metric), `scatter_figure()`, `type_heatmap()` (B-09).
+**`explain.py`** (B-27, D-27): metric decompositions for the case figures: luma/chroma split, SSIM and combined MS-SSIM maps, LPIPS map + per-layer values, DISTS per-stage texture/structure terms (all add up to the scores).
+
+**`viz.py`**: `explain_figure()` / `explain_pair_figure()` (case-specific panels), `case_figure()` (reference | distorted | |diff| | 1−SSIM map | LPIPS-VGG spatial map, with scores + ranks), `pair_figure()` (case C), `case_heatmaps()` (type × level, all refs vs one ref), `srcc_grid_figure()` (SRCC per type × level per metric), `scatter_figure()`, `type_heatmap()` (B-09).
 Outputs: `results/failures/{candidates,selected}_{A,B,C}.csv`, `results/figures/failures/*.png`.
 
 ## 4. Runtime (cross-platform)

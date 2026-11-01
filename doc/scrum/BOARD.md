@@ -42,6 +42,7 @@ Code: @hwupu implements, @ALLEN07056 reviews PRs (D-21).
 - [x] B-14 report skeleton + D-08 (Markdown → PDF) — report PR
 - [x] B-15 §1–§2, B-16 §3–§5 drafted — report PR
 - [x] B-17 contribution statement + GenAI disclosure drafted — report PR
+- [x] B-27 case-specific failure figures (@hwupu: "why show LPIPS for SSIM vs MS-SSIM?") — report PR
 - [x] D-22 verified: DISTS trained on KADID-10k (footnoted)
 
 ### Daily log

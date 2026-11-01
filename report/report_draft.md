@@ -36,7 +36,7 @@ LPIPS-VGG and DISTS share the same VGG16 backbone, so differences between them c
 - LPIPS and DISTS receive RGB.
 - Scoring all pairs took 40 min on an M2 Pro: deep metrics on MPS, traditional metrics on CPU (D-17).
 
-**Correctness checks** (`tests/`, 23 tests):
+**Correctness checks** (`tests/`, 24 tests):
 - An identical pair gets the perfect score.
 - PSNR matches `skimage` within 5e-5 dB.
 - SSIM matches a textbook implementation (which itself matches `skimage` to 1e-6), apart from one documented difference: pyiqa clamps a negative contrast-structure term to 0 (D-20, effect quantified in §3).
@@ -173,9 +173,19 @@ Full candidate lists: `results/failures/candidates_{A,B,C}.csv`. Selection: `res
 
 **Reading the heatmaps:** the x-axis L1–L5 is the KADID-10k distortion level, from 1 (mildest) to 5 (strongest). The exceptions are mean shift and contrast change, whose levels go in both directions around the reference (mean-shift L3 = no change). Gray cells hold only pixel-identical pairs.
 
-Each case shows a figure (reference | distorted | |diff| | 1−SSIM map | LPIPS-VGG map, with scores and global ranks $r$) and a heatmap. The heatmap's left panel is the case's signed score averaged per (type, level) cell over all references; the right panel is the selected image's reference; the black box marks the selected image.
 
-Each case shows a figure (reference | distorted | |diff| | 1−SSIM map | LPIPS-VGG map, with scores and global ranks) and a heatmap. The heatmap's left panel is the case's signed score averaged per cell over all references; the right panel is the selected image's reference. The black box marks the selected image.
+**Reading the case figures.** Each figure shows the reference, the distorted image, and **only the views of the metrics that disagree in that case**. Each view is computed from the metric itself, so its numbers add up to the metric's score (code: `src/humper/explain.py`):
+
+| panel | what it shows | used in |
+|---|---|---|
+| \|ΔY\| luma / \|ΔIQ\| chroma | the YIQ split of the pixel change (0–255, one shared scale). SSIM and MS-SSIM only receive Y, so chroma change is invisible to them | A-1, B-1, C-1 |
+| 1 − SSIM map | where SSIM's 11×11 window sees damage; its mean is 1 − SSIM | A-1, B-1, C-1 |
+| 1 − MS-SSIM map | MS-SSIM's 5 per-scale maps, upsampled and combined with its weights (same scale as the SSIM map) | A-1 |
+| LPIPS-VGG map | LPIPS's per-pixel distance; its mean is the LPIPS score | A-2, B-2, C-1 |
+| VGG16 stage bars | LPIPS per layer, and DISTS per stage split into texture (global feature *means*) and structure (global feature *correlations*); each metric's bars sum to its score | A-2, B-2 |
+| \|RGB diff\| | where the pixels changed (what PSNR averages) | B-2 |
+
+DISTS has no spatial map, because it compares whole-image statistics; the stage bars are its honest equivalent. A-1 and B-1 also have a scale-by-scale MS-SSIM figure, and every case has a type × level heatmap: the left panel is the case's signed score averaged per cell over all references, the right panel is the selected image's reference, and the black box marks the selected image.
 
 ### 4.1 A-1: SSIM vs MS-SSIM: `I18_04_04` (color diffusion, level 4)
 
@@ -192,7 +202,7 @@ Each case shows a figure (reference | distorted | |diff| | 1−SSIM map | LPIPS-
 - **Disagreement:** $g_A = 0.645$, the largest SSIM–MS-SSIM gap in the dataset. SSIM calls this image better than 75% of the dataset. MS-SSIM, every other metric and the humans put it in the bottom 10%. **MS-SSIM agrees with humans.**
 - **Systematic or isolated:** the left heatmap shows the same red pattern for **color diffusion, color saturation and color block** (mean gap up to +0.44) across all references. This is a family-wide difference between the two metrics, and I18 is its most extreme instance.
 - **Possible factors (draft):**
-  - *Scale / spatial extent* *(verified)*. Both metrics see only luma (YIQ Y), and its mean barely changes (151.9 → 152.3). The structure-contrast term $cs$ is 0.97 at the finest scale (the 11×11 window that SSIM uses) and falls steadily to 0.89, 0.81 and 0.72 at the coarser scales, which MS-SSIM weights most (0.30, 0.24, 0.13). The luma damage is a **large-scale, low-frequency** change: the bright halo around the sun and the sky/rock boundary are smeared. A small window sees each patch as "almost unchanged", while a large window sees the change.
+  - *Scale / spatial extent* *(verified)*. Both metrics see only luma (YIQ Y). Luma does change locally (mean |ΔY| = 16.6 on 0–255, up to 70 around the sun), but smoothly, and the changes cancel in the global mean (151.9 → 152.3). SSIM's luminance term barely penalises a smooth shift at this brightness, so its map lights up only at edges (mean damage 0.04). The MS-SSIM map is bright over the whole halo and the rock edge (mean 0.17). The structure-contrast term $cs$ is 0.97 at the finest scale (the 11×11 window that SSIM uses) and falls steadily to 0.89, 0.81 and 0.72 at the coarser scales, which MS-SSIM weights most (0.30, 0.24, 0.13). The luma damage is a **large-scale, low-frequency** change: the bright halo around the sun and the sky/rock boundary are smeared. A small window sees each patch as "almost unchanged", while a large window sees the change.
   - *Color.* Most of the visible damage, the sky turning cyan and the rock orange, is in **chroma**, which neither metric sees. Here MS-SSIM is right for a partly wrong reason: it catches the luma side-effect of the color change. Compare B-1, where the color change has no luma side-effect and MS-SSIM fails too.
   - *Cross-check with B-22 (verified).* With Wang's 2× downsampling, SSIM's rank for this image drops from 0.75 to 0.46, halving the gap. Viewing scale explains part of the disagreement.
 
@@ -209,8 +219,8 @@ Each case shows a figure (reference | distorted | |diff| | 1−SSIM map | LPIPS-
 - **Disagreement:** gap 0.453. Both metrics use the same VGG16 backbone (D-23), so the difference comes from the **formula**. LPIPS-VGG places the image mid-pack, while DISTS and the humans place it near the bottom. **DISTS agrees with humans.**
 - **Systematic or isolated:** within jitter alone both metrics order images almost perfectly (SRCC 0.94 LPIPS, 0.96 DISTS) *(verified)*. The failure is again **cross-type calibration**: the heatmap is red for jitter L3–L4 and color shift L4–L5 across all references, so LPIPS gives jitter smaller distances than its visual impact deserves.
 - **Possible factors (draft):**
-  - *Small geometric changes.* Jitter moves pixels by a few positions, so the outline of the jet becomes ragged (visible in the |diff| panel, concentrated on edges). LPIPS compares features **position by position** and averages them. Its learned weights come from 2AFC judgments on small patches, and those judgments may have taught it to discount small shifts.
-  - *Structure vs texture statistics.* DISTS compares **global** mean and correlation statistics of each feature map (its structure term). Breaking every straight edge of a large, salient object changes those statistics a lot.
+  - *Where each formula finds the distance* *(verified, stage bars)*. The DISTS score of 0.300 comes mostly from its **texture term at the deepest stages**: relu4_3 contributes 0.109 and relu5_3 0.111 + 0.041 structure. Jitter makes every straight edge ragged, which changes the *global average activation* of deep feature channels (edge and contour detectors). LPIPS spreads its 0.171 over the layers (0.009 → 0.062), and its map shows the damage only along the jet's outline, a small fraction of the image, which the spatial average dilutes.
+  - *Small geometric changes.* LPIPS compares normalised features **position by position**. Its weights were learned from 2AFC judgments on 64×64 patches, which may have taught it to discount small shifts.
   - *Salient region.* All the damage is on the object, the region viewers look at. Neither metric weights saliency, but this could explain why the human score is so low.
 
 ### 4.3 B-1: metric vs MOS, rank view (SRCC): SSIM on `I32_04_02` (color diffusion, level 2)
@@ -248,7 +258,7 @@ Each case shows a figure (reference | distorted | |diff| | 1−SSIM map | LPIPS-
 - **Systematic or isolated:** isolated. Only 1.2% of non-eccentricity-patch images have a DISTS rank error above 0.5, and within this type DISTS's SRCC is 0.67 *(verified)*. On the I81 row of the heatmap, L2 and L5 are dark red while L3 is near 0. The failure depends on **where the patches land**, not on the distortion type. (Across all references, DISTS's large positive residuals are on **color block** and **color shift**.)
 - **Possible factors (draft):**
   - *Spatial localization.* This distortion copies many small patches to nearby positions. The damage is local and sparse (see the |diff| map); most of the image is untouched.
-  - DISTS compares **global** feature statistics (means and variances over the whole map). Moving patches around inside the same image leaves those statistics almost unchanged. DISTS was in fact designed to tolerate this kind of texture resampling.
+  - DISTS compares **global** feature statistics (means and variances over the whole map). Moving patches around inside the same image leaves those statistics almost unchanged. DISTS was in fact designed to tolerate this kind of texture resampling. *(verified, stage bars)*: every DISTS term is tiny, at most 0.024 at relu5_3, for a total of 0.051. LPIPS, which compares position by position, finds about twice the distance (0.103), and its map lights up exactly at the moved patches.
   - *Salient / semantic content.* The patches create small discontinuities on the shirt, hair, phone and cup edges, near the face. Viewers notice discontinuities on a person and on object contours much more than the area fraction suggests.
 
 ### 4.5 C-1: SSIM vs LPIPS-VGG ranking: `I43_07_05` vs `I43_25_01` (reference I43)
@@ -265,7 +275,7 @@ Each case shows a figure (reference | distorted | |diff| | 1−SSIM map | LPIPS-
 - **Systematic or isolated:** systematic. The left heatmap (within-reference $r_{SSIM} - r_{LPIPS}$) is red for color saturation, color diffusion and quantization, and blue for brighten, darken, mean shift, contrast change and high sharpen. SSIM is lenient on color changes and harsh on luminance and contrast changes compared with LPIPS.
 - **Possible factors (draft):**
   - *Color (image $i$).* The leaf becomes lavender-gray: hue and saturation change while the luma structure (veins, drops) is intact. SSIM, which sees luma only, scores 0.978. LPIPS uses RGB deep features, which respond strongly to color, and scores it the worst image of the reference.
-  - *Contrast (image $j$).* The contrast is increased: a brighter, more saturated leaf and a darker background. SSIM's contrast term $\frac{2\sigma_x\sigma_y + C_2}{\sigma_x^2 + \sigma_y^2 + C_2}$ penalises *any* change of local variance, including an increase. Humans see an "enhanced" leaf, and LPIPS's normalised deep features are relatively insensitive to such a global contrast change.
+  - *Luminance in dark regions (image $j$)* *(verified, SSIM map)*. The leaf looks "enhanced", and the SSIM map is almost black on it. **80% of SSIM's damage lies in the dark, out-of-focus background** (37% of the image), whose luma drops from 42.5 to 13.8. SSIM's luminance term $\frac{2\mu_x\mu_y + C_1}{\mu_x^2 + \mu_y^2 + C_1}$ is *relative*: the same drop costs far more in dark regions (here l ≈ 0.6). Humans hardly care about a darker, blurred background. LPIPS's map is dark everywhere for $j$ (0.09), but bright over the whole frame for $i$ (0.70), where the chroma panel shows the large color change that SSIM cannot see.
 
 ---
 
@@ -296,10 +306,10 @@ Each case shows a figure (reference | distorted | |diff| | 1−SSIM map | LPIPS-
 | case | metric that fails | factor it ignores or over-weights | systematic? |
 |---|---|---|---|
 | A-1 | SSIM | large-scale (low-frequency) changes: single small window | yes (color types) |
-| A-2 | LPIPS-VGG | ragged edges from small geometric jitter; calibration across types | yes (jitter, color shift) |
+| A-2 | LPIPS-VGG | ragged edges from small geometric jitter: diluted by spatial averaging, while DISTS's deep texture statistics catch them | yes (jitter, color shift) |
 | B-1 | SSIM (and MS-SSIM) | **color**: luma-only input | yes (20.7% of color diffusion) |
 | B-2 | DISTS | **spatial localization**: global statistics ignore sparse local patch moves | no (content-specific) |
-| C-1 | SSIM | color (ignored) and contrast enhancement (over-penalised) | yes |
+| C-1 | SSIM | color (ignored); luminance change in dark, unimportant regions (over-penalised by its relative luminance term) | yes |
 
 Candidate answer to the spec question *"a perceptual factor not adequately captured"*: **chromatic change.** It is invisible to SSIM and MS-SSIM (luma only) and only weakly scaled across types by LPIPS. A second candidate is **sparse, localized damage on salient content**, which DISTS's global statistics miss.
 
