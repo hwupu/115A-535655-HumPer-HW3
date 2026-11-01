@@ -19,12 +19,14 @@ Small analysis project. Design goal: **compute expensive scores once, analyse ma
 │   ├── failures.py           # rank-disagreement mining
 │   └── viz.py                # figure helpers (triptychs, heatmaps)
 ├── scripts/
-│   └── compute_scores.py     # long-running job → results/scores.csv
+│   ├── compute_scores.py     # long-running job → results/scores.csv
+│   └── ssim_variants.py      # B-22: SSIM downsample / unclamped → results/ssim_variants.csv (~4 min)
 ├── notebooks/
 │   ├── 01_data_check.ipynb
 │   ├── 02_correlation.ipynb
 │   ├── 03_failure_cases.ipynb
-│   └── 04_selected_cases.ipynb   # the 5 report cases + type × level heatmaps
+│   ├── 04_selected_cases.ipynb   # the 5 report cases + type × level heatmaps
+│   └── 05_quant_figures.ipynb    # scatter, SRCC by type, monotonicity (B-06), SSIM variants (B-22)
 ├── tests/test_sanity.py      # metric sanity checks (§5)
 ├── data/                     # gitignored — raw dataset
 ├── results/                  # scores.csv, tables/, figures/
@@ -70,6 +72,9 @@ Columns: `id, ref_path, dist_path, ref_id, dist_type, dist_name, dist_group, lev
 - `plcc(x, y, fit="logistic5")`: fits the VQEG 5-parameter logistic (on z-scored x), then computes Pearson
 - `krcc(x, y)`: Kendall, as an extra
 - `table(scores, by=None | "dist_type")`
+- `monotonicity(scores)`: per type, share of (reference, type) series whose aligned score never improves with level (B-06)
+
+**`ssim_variants.py`** (B-22, D-20/D-26): textbook SSIM on YIQ luma with `clamp_cs` and Wang's `downsample` switches; matches pyiqa within 1e-5 / 1e-4
 
 **`failures.py`** (D-24): direction-aligned percentile ranks on the eval set (identical pairs dropped).
 Candidates come only from images with `mos_var` ≤ its 90th percentile.
@@ -82,7 +87,7 @@ Candidates come only from images with `mos_var` ≤ its 90th percentile.
 - `select_diverse(cands, k, score, max_per)`: greedy top-k with caps (per distortion type / reference / metric pair)
 - `systematic()`: share of images per type with |rank gap| > 0.5 (systematic vs isolated); `family_agreement()`: per-reference Kendall τ
 
-**`viz.py`**: `case_figure()` (reference | distorted | |diff| | 1−SSIM map | LPIPS-VGG spatial map, with scores + ranks), `pair_figure()` (case C), `case_heatmaps()` (type × level, all refs vs one ref), `srcc_grid_figure()` (SRCC per type × level per metric).
+**`viz.py`**: `case_figure()` (reference | distorted | |diff| | 1−SSIM map | LPIPS-VGG spatial map, with scores + ranks), `pair_figure()` (case C), `case_heatmaps()` (type × level, all refs vs one ref), `srcc_grid_figure()` (SRCC per type × level per metric), `scatter_figure()`, `type_heatmap()` (B-09).
 Outputs: `results/failures/{candidates,selected}_{A,B,C}.csv`, `results/figures/failures/*.png`.
 
 ## 4. Runtime (cross-platform)

@@ -5,79 +5,58 @@ Async daily: add one dated line under *Daily log* (`done / next / blocked`).
 
 ---
 
-## Sprint 0 — Fri 10-30 → Sun 11-01 (closed; open items carried to S1, retro still to fill)
+## Sprint 0 — Fri 10-30 → Sun 11-01 (closed)
 
-**Goal:** env + data ready; every metric runs on 20 images end-to-end.
+**Goal:** env + data ready; every metric runs on 20 images end-to-end. ✔
 
-### To Do
-- [ ] B-01c accept GitHub invite; WSL setup + `uv sync` + device check — B (@ALLEN07056)
-- [ ] B-02 GenAI policy check; agree on decisions D-01..D-07 — B
+### Done (verified by @ALLEN07056's approval of the report PR, D-26)
+- [x] B-01 git + uv + layout + README + AGENTS.md — A
+- [x] B-01b public repo, @ALLEN07056 invited — A
+- [x] B-01c WSL setup + `uv sync` + `uv run pytest` — @ALLEN07056 (PR review checklist)
+- [x] B-02 GenAI policy check; Proposed decisions accepted (D-26) — @ALLEN07056 + @hwupu
+- [x] B-03 KADID-10k + `data.py` + notebook 01 — A
+- [x] B-04 `metrics.py` registry + smoke run — A
 
-### Doing
-
-### Review
-- [ ] B-11 + B-12 failure mining (`failures.py`, `viz.py`, notebook 03, 20 candidate figures) — A→B, PR `b-11-failure-mining` (stacked on #2)
-- [ ] B-03 KADID-10k (HF mirror, D-14), `data.py`, `01_data_check.ipynb`: 10,125 pairs, MOS ↓ with level — A
-- [ ] B-04 `metrics.py` registry + smoke run (40 pairs, CPU vs MPS agree < 1e-5) — A
-- [ ] B-07 (pulled from S1) full run: `results/scores.csv` 10,125 × 5 metrics, MPS, 40 min — A
-- [ ] B-08 (pulled from S1) `evaluate.py` SRCC/KRCC/PLCC(raw+logistic5) + tests + `02_correlation.ipynb` tables — A
-- [ ] B-01 git + uv + layout + README + AGENTS.md — A (reviewer: B, check on WSL)
-
-### Done
-- [x] B-01b public repo pushed; @ALLEN07056 invited with write access (accept invite on GitHub) — A
-
-### Daily log
-- 10-30 A: planning docs drafted (P-002). next: B-01.
-- 10-30 A: B-01 done → Review (P-003). uv env verified on macOS: torch 2.15 + MPS, pyiqa 0.1.16. next: B-01b.
-- 10-30 A: repo public on GitHub, HW3.pdf included (P-004, D-13). next: add B as collaborator, B-03.
-- 10-30 A: B-03, B-04, B-08 → Review; B-07 running (P-005). Found: pyiqa SSIM needs float64, which fails on MPS, so traditional metrics now run on CPU (D-17). Pulled B-07/B-08 from S1 since S0 finished early. blocked: none.
-- 10-31 A: invited @ALLEN07056 (write). Full scoring run at 25%.
-- 10-31 A: B-07 done → Review. Overall SRCC: MS-SSIM .826, LPIPS .822, DISTS .814, PSNR .676, SSIM .619. Found 320 pixel-identical pairs (D-18) and 2 logistic-fit failures (D-19). Added B-22 (SSIM downsampling). next: B can start B-05/B-06/B-09 from committed scores.csv.
-
-### Review + Retro (fill on 11-01)
-- Demo:
-- Keep:
-- Change:
+### Retro
+- Keep: committed `scores.csv` lets B work without re-running 40 min of scoring; tests catch implementation details (cs clamp).
+- Change: stacked PRs + delete-branch closed #2/#4 on merge; retarget to `main` before merging the next PR.
 
 ---
 
-## ▶ Sprint 1 — Mon 11-02 → Sun 11-08 (current)
+## Sprint 1 — Mon 11-02 → Sun 11-08 (closed early, 11-02)
 
-**Goal:** all scores validated; SRCC/PLCC tables + per-distortion heatmap; report skeleton.
+**Goal:** all scores validated; SRCC/PLCC tables + per-distortion heatmap; report skeleton. ✔ (plus the S2 drafting work)
 Code: @hwupu implements, @ALLEN07056 reviews PRs (D-21).
 
-### To Do
-- [ ] B-01c (from S0) accept GitHub invite; WSL setup + `uv sync` + `uv run pytest` — @ALLEN07056
-- [ ] B-02 (from S0) GenAI policy check; accept/reject Proposed decisions D-01..D-22 — @ALLEN07056 + @hwupu
-- [ ] Review S0 PR-less commits (B-01, B-03, B-04, B-07, B-08 on `main`) — @ALLEN07056
-- [ ] B-06 monotonicity vs level — A→B
-- [ ] B-22 SSIM variants (downsample, unclamped cs) — A→B
-- [ ] B-09 heatmap + scatter figures — A→B
-- [ ] B-14 report skeleton, decide D-08 — @ALLEN07056
-- [ ] B-10 interpretation notes — A+B
-- [ ] B-13 (pulled from S2) pick final 6–8 failure cases from `results/figures/failures/` and write explanations — @hwupu + @ALLEN07056 (humans)
-
-### Doing
-
-### Review
-- [ ] B-25 five report cases + type × level heatmaps + draft `report/failure_cases_draft.md` (D-25) — A→B, PR `b-25-selected-cases` (stacked on #3)
-- [ ] B-20 main LPIPS → VGG16 (D-23); overall SRCC 0.720 (Alex 0.822, now supplementary) — A→B, PR `b-20-lpips-vgg` (stacked on #1)
-- [ ] B-05 sanity tests (12 tests; found pyiqa SSIM cs-clamp, D-20) — A→B, PR `b-05-sanity-tests`
-
-### Done
+### Done (verified by @ALLEN07056's approval of the report PR, D-26)
+- [x] Review of S0 commits that went straight to `main` — @ALLEN07056 (covered by the report PR review)
+- [x] B-05 sanity tests (D-20) — PR #1
+- [x] B-20 main LPIPS → VGG16 (D-23) — PR #2
+- [x] B-11 + B-12 failure mining + candidate figures (D-24) — PR #3
+- [x] B-25 five report cases + type × level heatmaps (D-25) — PR #4
+- [x] B-06 monotonicity vs level (`evaluate.monotonicity`, notebook 05) — report PR
+- [x] B-22 SSIM variants: downsampling +0.13 SRCC, clamp no effect (D-26) — report PR
+- [x] B-09 scatter + SRCC-by-type heatmap (notebook 05) — report PR
+- [x] B-10 interpretation notes → report §3 — report PR
+- [x] B-13 failure explanations → report §4 (AI draft; team owns on approval) — report PR
+- [x] B-14 report skeleton + D-08 (Markdown → PDF) — report PR
+- [x] B-15 §1–§2, B-16 §3–§5 drafted — report PR
+- [x] B-17 contribution statement + GenAI disclosure drafted — report PR
+- [x] D-22 verified: DISTS trained on KADID-10k (footnoted)
 
 ### Daily log
-- 11-02 A: S1 opened. Code review moves to PRs with @ALLEN07056 (D-21, CODEOWNERS). B-05 → Review (P-006). next: B-06.
-- 11-02 A: B-20 → Review (P-007). LPIPS-VGG close to DISTS within types, but weaker across types (color .48, spatial .53). next: B-11/B-12 failure mining (plan approved, D-24).
-- 11-02 A: B-11/B-12 → Review (P-008). 15 + 5 candidates. Findings: SSIM fails systematically on color (color_block 47% of images), PSNR on global brightness (brighten 25%); traditional-vs-learned conflicts all involve a brightness change, and humans split 3:2. next: B-06, B-22, B-09.
-- 11-02 A: B-25 → Review (P-009). @hwupu asked for 5 specific cases (A-1, A-2, B-1, B-2, C-1) + heatmaps + draft report. Found: SSIM's and LPIPS's failures are mostly cross-type calibration (within-type SRCC 0.88 / 0.94 on the failing types); SSIM blind to chroma (verified luma unchanged). Explanations in the draft are hypotheses for B-13.
+- 11-02 A: S1 opened. Code review moves to PRs with @ALLEN07056 (D-21, CODEOWNERS). B-05 → Review (P-006).
+- 11-02 A: B-20 → Review (P-007). LPIPS-VGG close to DISTS within types, but weaker across types (color .48, spatial .53).
+- 11-02 A: B-11/B-12 → Review (P-008). SSIM fails systematically on color (color_block 47%), PSNR on brightness (brighten 25%).
+- 11-02 A: B-25 → Review (P-009). Cross-type calibration is the main failure; SSIM blind to chroma.
+- 11-02 A: PRs #1–#4 merged at @hwupu's request (#2/#4 had to be reopened and rebased, see retro). Report draft PR opened (P-010): B-06, B-09, B-22 done; DISTS confirmed in-domain. All tickets close when @ALLEN07056 approves (D-26).
 
 ## Sprint 2 — Mon 11-09 → Sun 11-15
 
-**Goal:** ≥5 failure cases with figures and explanations; full report draft.
-Planned: B-11, B-12, B-13, B-15, B-16
+**Goal:** ≥5 failure cases with figures and explanations; full report draft. ✔ Done early in S1.
+Use the sprint for: team proofreading of `report/report_draft.md`, cutting to ≤ 4 pages.
 
 ## Release — Mon 11-16 → Tue 11-17 (before class)
 
 **Goal:** submitted.
-Planned: B-17, B-18, B-19 — **code freeze Mon 11-16 18:00**
+Open: B-18 (macOS ✔ 11-02; WSL in report PR review), B-19 PDF + submission — **code freeze Mon 11-16 18:00**. B-21 (stretch) dropped.

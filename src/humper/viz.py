@@ -122,3 +122,51 @@ def srcc_grid_figure(tables: dict[str, pd.DataFrame]) -> plt.Figure:
     fig.colorbar(im, ax=axes, fraction=0.02, pad=0.01).set_label("SRCC within cell (81 references)", fontsize=7)
     fig.text(0.01, 0.01, "gray = no data (cell held only pixel-identical pairs)", fontsize=7)
     return fig
+
+
+# Categorical palette (fixed order, validated for CVD separation; dataviz reference palette), one per KADID group.
+GROUP_COLORS = dict(zip(["blur", "color", "compression", "noise", "brightness", "spatial", "sharpness_contrast"],
+                        ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6"]))
+
+
+def scatter_figure(scores: pd.DataFrame) -> plt.Figure:
+    """B-09: raw metric value (native direction, no flipping) vs MOS, coloured by distortion group,
+    with the VQEG logistic used for PLCC drawn on top. Pixel-identical pairs are left out."""
+    from humper.evaluate import fit_logistic
+    from humper.metrics import aligned
+
+    s = scores[scores["psnr"] < 80]
+    fig, axes = plt.subplots(1, len(METRICS), figsize=(3.1 * len(METRICS), 3.2), sharey=True)
+    for ax, m in zip(axes, METRICS):
+        for group, color in GROUP_COLORS.items():
+            g = s[s["dist_group"] == group]
+            ax.scatter(g[m.name], g["mos"], s=3, alpha=0.35, color=color, label=group, linewidths=0, rasterized=True)
+        f = fit_logistic(aligned(s, m.name), s["mos"])
+        if f is not None:
+            order = np.argsort(s[m.name].to_numpy())
+            ax.plot(s[m.name].to_numpy()[order], f[order], color="black", lw=1.5)
+        ax.set_title(f"{LABELS[m.name]} ({'higher' if m.higher_is_better else 'lower'} = better)", fontsize=9)
+        ax.set_xlabel(m.name, fontsize=8)
+        ax.tick_params(labelsize=7)
+        ax.grid(alpha=0.2)
+    axes[0].set_ylabel("MOS (higher = better)", fontsize=8)
+    handles = [plt.Line2D([], [], marker="o", ls="", color=c, label=g) for g, c in GROUP_COLORS.items()]
+    fig.legend(handles=handles, loc="lower center", ncol=7, fontsize=7.5, frameon=False, bbox_to_anchor=(0.5, -0.06))
+    fig.tight_layout()
+    return fig
+
+
+def type_heatmap(srcc_by_type: pd.DataFrame) -> plt.Figure:
+    """B-09: SRCC per distortion type (rows) x metric (columns), values printed in each cell."""
+    g = srcc_by_type.rename(columns=LABELS)
+    fig, ax = plt.subplots(figsize=(5.2, 7.2))
+    im = ax.imshow(g.to_numpy(float), cmap="RdBu", vmin=-1, vmax=1, aspect="auto")
+    ax.set_xticks(range(g.shape[1]), g.columns, fontsize=8, rotation=30, ha="right")
+    ax.set_yticks(range(g.shape[0]), g.index, fontsize=7.5)
+    for y in range(g.shape[0]):
+        for x in range(g.shape[1]):
+            v = g.iat[y, x]
+            ax.text(x, y, f"{v:.2f}", ha="center", va="center", fontsize=6.5, color="white" if abs(v) > 0.6 else "black")
+    fig.colorbar(im, ax=ax, fraction=0.05, pad=0.02).set_label("SRCC within distortion type (405 images)", fontsize=7)
+    fig.tight_layout()
+    return fig

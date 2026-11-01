@@ -1,0 +1,5 @@
+,srcc,plcc,max |Δ| vs main
+ssim,0.6188,0.628,0.0
+ssim_noclamp,0.6189,0.6282,0.0129
+ssim_ds,0.7516,0.748,0.4245
+ssim_ds_noclamp,0.7517,0.7481,0.4245
