@@ -5,6 +5,109 @@
 > The perceptual explanations in §4–§5 started as AI hypotheses (AGENTS.md). Lines marked *(verified)* were checked numerically.
 > When @ALLEN07056 approves the PR, the team takes ownership of the text (D-26). Before the PDF: cut to ≤ 4 pages (B-19) and convert (D-08).
 
+## Background: the metrics and the evaluation, explained simply
+
+> Primer adapted from the team's ELI5 notes (2026-11-02). It is longer than the PDF can hold: condense it into §1 for the final report (B-19).
+> The *In this project* lines link each idea to our setup and results.
+
+### Full-reference image quality metrics
+
+A full-reference metric compares a distorted image with its pristine original and outputs one number. The question is how well that number agrees with what people see.
+
+**PSNR (Peak Signal-to-Noise Ratio): "how different is each dot?"**
+- It compares the two images pixel by pixel, averages the squared differences (MSE) and converts the result to decibels:
+$$\text{PSNR} = 10\log_{10}\frac{\text{MAX}^2}{\text{MSE}}, \qquad \text{MAX} = 255 \text{ for 8-bit images}$$
+- Higher = closer to the original.
+- Rules of thumb:
+  - above 40 dB: hard to tell from the original;
+  - 30–50 dB: good;
+  - 20–30 dB: noticeable loss;
+  - below 20 dB: clearly degraded;
+  - identical images: ∞.
+- **Catch:** it counts raw pixel errors, not what humans notice. A tiny shift of the whole image costs a lot of PSNR but looks fine.
+- *In this project:* computed on RGB. Identical images are capped at 80 dB (D-18).
+
+**SSIM (Structural Similarity): "does it still look like the original?"**
+- In small windows (an 11×11 Gaussian) it compares three things:
+  - **luminance:** is the window equally bright? (μ)
+  - **contrast:** is the light/dark spread the same? (σ)
+  - **structure:** do the patterns and edges line up? (σ_xy)
+- The three comparisons are multiplied into one local score, and the local scores are averaged over the image:
+$$\text{SSIM}(x,y) = \frac{(2\mu_x\mu_y + c_1)(2\sigma_{xy} + c_2)}{(\mu_x^2 + \mu_y^2 + c_1)(\sigma_x^2 + \sigma_y^2 + c_2)}$$
+- 1 = identical, about 0.9 or more = very similar, 0.5–0.8 = visibly different.
+- It is **hand-crafted**: nothing is learned from data, and only the constants and the window size are chosen.
+- Compared with PSNR:
+  - A slight brightening hurts PSNR a lot but SSIM little.
+  - Blurred edges hurt SSIM more than PSNR.
+- Shifts, rotations and heavy distortions can still fool it.
+- *In this project:* pyiqa computes SSIM on the **luma (Y) channel only**, so a pure color change is invisible to it (case B-1). The luminance term is *relative*, so the same brightness drop costs more in dark regions (case C-1).
+
+**MS-SSIM (Multi-Scale SSIM): SSIM from several viewing distances.**
+- A painting shows brushstrokes from 5 cm away and overall shapes from across the room. SSIM looks from one distance only.
+- MS-SSIM compares contrast and structure at 5 scales, halving the image size each time, and compares brightness only at the coarsest scale.
+- It multiplies the per-scale results, each raised to a weight measured with human viewers (the middle scales matter most):
+$$\text{MS-SSIM} = [l_M]^{\alpha_M}\prod_{j=1}^{M}[c_j]^{\beta_j}[s_j]^{\gamma_j}$$
+- It is still hand-crafted, fast and deterministic. It needs images large enough to downsample several times, and it is still weak on geometric shifts.
+- *In this project:* the weights are (0.045, 0.286, 0.300, 0.236, 0.133). Large, smooth damage that SSIM's small window misses shows up at the coarse scales (case A-1 and its scale-by-scale figure).
+
+**Backbone: the pretrained network the learned metrics build on.**
+- A large network such as VGG or AlexNet is trained for ImageNet classification. It turns an image into features: early layers capture edges and textures, deep layers capture shapes and objects.
+- A learned metric adds a small part on top that turns feature differences into a score.
+- The metric inherits the backbone's strengths and blind spots, and **different backbones give different, non-comparable scores**.
+- *In this project:* LPIPS and DISTS both use **VGG16**, so differences between them come from the formula (D-23). Switching LPIPS to AlexNet changes its SRCC from 0.720 to 0.822 (§3).
+
+**LPIPS (Learned Perceptual Image Patch Similarity): a trained "robot eye".**
+- Both images go through the backbone. At each of 5 layers the features are normalised and their squared difference is weighted by **linear weights learned from human 2AFC judgments** ("which of two patches is closer to the original?", the BAPPS dataset, 64×64 patches). The result is averaged over space and summed over layers.
+- 0 = identical, about 0.1 = very similar, 0.5 or more = clearly different. **Lower = better.**
+- It tolerates things humans ignore (tiny shifts, similar textures) and punishes things they notice (blur, artifacts).
+- The original paper found that even uncalibrated deep features beat SSIM and PSNR.
+- It can be fooled by adversarial noise.
+- *In this project:* LPIPS-VGG v0.1. Its spatial map and per-layer values appear in the case figures; they add up to the score.
+
+**DISTS (Deep Image Structure and Texture Similarity): "SSIM on deep features, with texture tolerance".**
+- Two photos of the same grass field have every blade in a different place: pixels say "totally different", the eye says "same grass". DISTS agrees with the eye.
+- It runs both images through VGG16. At each layer and channel it compares:
+  - **texture:** the global *means* of the feature maps, ignoring position;
+  - **structure:** the global *correlation* between the feature maps.
+- Learned weights combine the terms over layers. 0 = identical, **lower = better.**
+- DISTS replaces max-pooling with **L2 pooling**:
+  - max-pooling keeps only the largest value in each 2×2 window, so it jumps when content shifts by one pixel;
+  - L2 pooling takes the root-mean-square of the window, so every value contributes and small shifts change little.
+- It tolerates texture resampling (grass, bricks, fur, water) and does well on GAN and super-resolution outputs.
+- *In this project:* DISTS's weights were **trained on KADID-10k**, our test set (D-22). Because it compares whole-image statistics, it has no spatial map; the case figures show its per-layer texture/structure terms instead. That same global view explains case B-2.
+
+### KADID-10k
+
+81 clean photos, each damaged in 25 ways at 5 strengths, giving 10,125 images rated by people (a mean opinion score, MOS, from 1 to 5, higher = better). The distortion groups are blur, color, compression (JPEG, JPEG2000), noise, brightness change, spatial distortions, and sharpness/contrast.
+- These are mostly classical distortions, not the artifacts of generative models, where LPIPS and DISTS tend to shine more.
+
+### How agreement with humans is measured
+
+**SRCC (Spearman rank correlation): "same ranking?"**
+- Rank all images by the humans and by the metric, then correlate the two rankings. 1 = identical order, 0 = unrelated, −1 = reversed.
+- It looks at order only, so it compares metrics fairly across very different scales.
+- *In this project:* instead of reporting |SRCC| for lower-is-better metrics, we flip their sign first (§2), so every metric reads "higher = agrees more".
+
+**PLCC (Pearson linear correlation): "same straight line?"**
+- It uses the actual values, so a curved metric–MOS relation lowers it. As is standard, we first fit a monotonic 5-parameter logistic curve (§2).
+- **High SRCC with lower PLCC** means the metric ranks correctly but its scale is warped relative to human scores.
+
+### Summary and what the literature reports
+
+| metric | type | key idea | scales | better | KADID-10k SRCC: literature† | KADID-10k SRCC: ours |
+|---|---|---|---|---|---|---|
+| PSNR | hand-crafted | pixel error | pixel | higher | 0.676 | 0.676 |
+| SSIM | hand-crafted | luminance, contrast, structure | single | higher | 0.724 | 0.619 (0.752 with Wang's downsampling) |
+| MS-SSIM | hand-crafted | SSIM across zoom levels | 5 | higher | 0.826 | 0.826 |
+| LPIPS | learned | calibrated deep-feature distance | 5 layers | lower | 0.843 | 0.720 VGG / 0.822 AlexNet |
+| DISTS | learned | deep structure + texture statistics | 6 stages | lower | 0.887 | 0.814 |
+
+†As reported in MR-IQA (Table 2). Other papers report different values, e.g. SSIM 0.783 and MS-SSIM 0.838 (JND-SalCAR), or SSIM ≈ 0.72 and DISTS ≈ 0.88 (PIQ). The differences come from implementation details: color vs grayscale, resizing, and the backbone.
+- **PSNR and MS-SSIM** match the literature exactly.
+- **SSIM** matches once Wang's original downsampling is used (B-22).
+- **LPIPS** is close with the AlexNet backbone, which the literature number most likely uses.
+- **DISTS** is 0.07 lower than reported, and we have not explained why yet (TODO: check whether the published numbers resize the images, or use a different weight version).
+
 ## 1. Metrics and Dataset
 
 **Dataset: KADID-10k** (Lin et al., QoMEX 2019).
@@ -331,8 +434,13 @@ Candidate answer to the spec question *"a perceptual factor not adequately captu
 - K. Ding, K. Ma, S. Wang, E. P. Simoncelli, "Image quality assessment: unifying structure and texture similarity," IEEE TPAMI 2022.
 - H. R. Sheikh, M. F. Sabir, A. C. Bovik, "A statistical evaluation of recent full reference image quality assessment algorithms," IEEE TIP 2006 (logistic mapping).
 - C. Chen, J. Mo, "IQA-PyTorch (pyiqa)," https://github.com/chaofengc/IQA-PyTorch.
+- MR-IQA: Mask Reference Image Quality Assessment, https://arxiv.org/pdf/2302.13770 (Table 2, literature numbers in Background).
+- A comprehensive evaluation of full-reference IQA algorithms on KADID-10k, https://arxiv.org/pdf/1907.02096.
+- JND-SalCAR, https://arxiv.org/pdf/1902.05316.
+- PIQ documentation, https://piq.readthedocs.io/en/latest/overview.html.
 
 ## Remaining before submission (Release: B-18, B-19)
+- [ ] Verify the literature numbers in the Background table against the cited papers, and find why our DISTS (0.814) is below the reported 0.887.
 - [ ] Convert to PDF (D-08) and cut to ≤ 4 pages: keep 1 image figure per case, the scatter plot, one heatmap; move the rest to the repo.
 - [ ] Clean-clone reproduction on WSL (B-18; macOS done).
 - [ ] Submit the PDF + repository link (B-19).
