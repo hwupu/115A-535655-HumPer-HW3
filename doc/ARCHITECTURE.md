@@ -43,7 +43,7 @@ data/kadid10k/ ──data.py──▶ pairs DataFrame
                      ┌────────┴─────────┐
                      ▼                  ▼
           evaluate.py (02_*)      failures.py (03_*)
-          tables/*.csv, heatmap   figures/failure_*.png
+          tables/*.csv            failures/*.csv, figures/failures/*.png
                      └────────┬─────────┘
                               ▼
                          report/ (PDF)
@@ -70,11 +70,16 @@ Columns: `id, ref_path, dist_path, ref_id, dist_type, dist_name, dist_group, lev
 - `krcc(x, y)`: Kendall, as an extra
 - `table(scores, by=None | "dist_type")`
 
-**`failures.py`**: converts each metric and the MOS to percentile ranks (direction-aligned), then computes
-- `gap_human[m] = |rank_m − rank_mos|`
-- `gap_pair[a,b] = |rank_a − rank_b|` (traditional vs learned)
+**`failures.py`** (D-24): direction-aligned percentile ranks on the eval set (identical pairs dropped).
+Candidates come only from images with `mos_var` ≤ its 90th percentile.
+- `metric_pairs()`: case A, `gap = |r_a − r_b|` for all 10 metric pairs
+- `vs_human()`: case B, signed `gap = r_m − r_mos` (`too_optimistic` / `too_pessimistic`)
+- `family_pairs()`: case C, same-reference pairs where the traditional and learned family means (within-reference ranks) order two images oppositely; `strength = min(|Δtrad|, |Δlearned|)`, `human_sides_with` ∈ {traditional, learned, tie}
+- `select_diverse(cands, k, score, max_per)`: greedy top-k with caps (per distortion type / reference / metric pair)
+- `systematic()`: share of images per type with |rank gap| > 0.5 (systematic vs isolated); `family_agreement()`: per-reference Kendall τ
 
-It returns the top-k cases, capped at N per distortion type so the selection stays diverse (no cherry-picking).
+**`viz.py`**: `case_figure()` (reference | distorted | |diff| | 1−SSIM map | LPIPS-VGG spatial map, with scores + ranks), `pair_figure()` (case C).
+Outputs: `results/failures/{candidates,selected}_{A,B,C}.csv`, `results/figures/failures/*.png`.
 
 ## 4. Runtime (cross-platform)
 
