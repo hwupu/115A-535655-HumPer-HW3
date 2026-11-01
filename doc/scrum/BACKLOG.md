@@ -22,8 +22,8 @@ Size: **S** ≤ 2h, **M** ≈ half day, **L** ≈ 1 day. Rubric points in bracke
 | B-09 | Overall table + per-distortion-type SRCC heatmap + scatter plots | M | S1 | A→B | Quant [20] |
 | B-10 | Write the interpretation notes for the quant results (where each metric wins/loses) | S | S1 | A+B | Analysis [20] |
 | **Epic 4 — Failure analysis** |||||
-| B-11 | `failures.py`: rank gaps (metric↔MOS, PSNR/SSIM↔LPIPS/DISTS), diversity cap | M | S2 | A→B | Failure [20] |
-| B-12 | Select ≥5 cases (target 6–8, then cut); triptych figures with scores + MOS rank | M | S2 | A→B | Failure [20] |
+| B-11 | `failures.py`: rank gaps for cases A/B/C, diversity caps, systematic-vs-isolated table (D-24) | M | S1 | A→B | Failure [20] |
+| B-12 | Candidate figures (images + error/SSIM/LPIPS maps) for top-5 per case; humans pick final 6–8 | M | S1 | A→B | Failure [20] |
 | B-13 | Perceptual explanation per case (structure/texture/shift/color/contrast/saliency) | L | S2 | A+B | Analysis [20] |
 | **Epic 5 — Report & submission** |||||
 | B-14 | Report skeleton (6 required sections), decide D-08 | S | S1 | B | Clarity [10] |
