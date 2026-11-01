@@ -34,5 +34,5 @@ Size: **S** ≤ 2h, **M** ≈ half day, **L** ≈ 1 day. Rubric points in bracke
 | B-19 | Page check (≤4 pp), proofread, submit PDF + code | S | Rel | A+B | Clarity [10] |
 | B-22 | SSIM variants: original auto-downsampling (`downsample=True`) and unclamped cs (D-20). Our SRCC 0.62 is below commonly reported values. Decide which to report | S | S1 | A→B | Impl [15] |
 | **Stretch** |||||
-| B-20 | Add LPIPS-vgg or a no-reference metric for contrast | M | — | — | — |
+| B-20 | ~~Stretch~~ → S1: switch main LPIPS to VGG16 (D-23); keep AlexNet as supplementary | S | S1 | A→B | Impl [15] |
 | B-21 | Repeat the key results on TID2013 subset for robustness | L | — | — | — |

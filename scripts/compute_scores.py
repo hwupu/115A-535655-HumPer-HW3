@@ -19,13 +19,13 @@ from tqdm import tqdm
 
 from humper import get_device
 from humper.data import REPO_ROOT, load_image, load_pairs
-from humper.metrics import BY_NAME, METRICS, create, device_for, score
+from humper.metrics import ALL_METRICS, BY_NAME, create, device_for, score
 
 
 def parse_args():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--out", type=Path, default=REPO_ROOT / "results" / "scores.csv")
-    p.add_argument("--metrics", nargs="+", default=[m.name for m in METRICS], choices=list(BY_NAME))
+    p.add_argument("--metrics", nargs="+", default=[m.name for m in ALL_METRICS], choices=list(BY_NAME))
     p.add_argument("--limit", type=int, help="only the first N pairs (smoke test)")
     p.add_argument("--n-refs", type=int, help="random subset of reference images")
     p.add_argument("--seed", type=int, default=0)
@@ -36,6 +36,8 @@ def parse_args():
 
 
 def save(df: pd.DataFrame, out: Path) -> None:
+    metric_cols = [m.name for m in ALL_METRICS if m.name in df]
+    df = df[[c for c in df if c not in metric_cols and c != "device"] + metric_cols + ["device"]]
     tmp = out.with_suffix(".tmp")
     df.to_csv(tmp, index=False, float_format="%.6g")
     tmp.replace(out)  # atomic, so an interrupted run never leaves a broken CSV
@@ -100,7 +102,10 @@ def main():
         "metrics": {m: {"pyiqa": BY_NAME[m].pyiqa_name, "higher_is_better": BY_NAME[m].higher_is_better}
                     for m in args.metrics},
     }
-    args.out.with_name(args.out.stem + "_run_info.json").write_text(json.dumps(info, indent=2))
+    # one entry per run: a later run that adds a metric must not erase how earlier columns were made
+    info_path = args.out.with_name(args.out.stem + "_run_info.json")
+    runs = json.loads(info_path.read_text())["runs"] if info_path.exists() else []
+    info_path.write_text(json.dumps({"runs": [*runs, info]}, indent=2))
     print(f"wrote {args.out} in {info['seconds']} s")
 
 

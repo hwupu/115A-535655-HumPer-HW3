@@ -58,12 +58,14 @@ Code: @hwupu implements, @ALLEN07056 reviews PRs (D-21).
 ### Doing
 
 ### Review
+- [ ] B-20 main LPIPS → VGG16 (D-23); overall SRCC 0.720 (Alex 0.822, now supplementary) — A→B, PR `b-20-lpips-vgg` (stacked on #1)
 - [ ] B-05 sanity tests (12 tests; found pyiqa SSIM cs-clamp, D-20) — A→B, PR `b-05-sanity-tests`
 
 ### Done
 
 ### Daily log
 - 11-02 A: S1 opened. Code review moves to PRs with @ALLEN07056 (D-21, CODEOWNERS). B-05 → Review (P-006). next: B-06.
+- 11-02 A: B-20 → Review (P-007). LPIPS-VGG close to DISTS within types, but weaker across types (color .48, spatial .53). next: B-11/B-12 failure mining (plan approved, D-24).
 
 ## Sprint 2 — Mon 11-09 → Sun 11-15
 

@@ -59,7 +59,8 @@ Columns: `id, ref_path, dist_path, ref_id, dist_type, dist_name, dist_group, lev
 
 **`metrics.py`**: `MetricSpec(name, pyiqa_name, higher_is_better, family, note)`; `create()` asserts our direction == pyiqa's `lower_better`; `aligned()` flips sign.
 - `PSNR, SSIM, MS-SSIM`: higher = better
-- `LPIPS (alex|vgg), DISTS`: lower = better → negated in `evaluate.py` before correlating
+- `lpips_vgg, dists` (main, both VGG16, D-23) and `lpips_alex` (`EXTRA_METRICS`, supplementary): lower = better → negated by `aligned()` before correlating
+- `METRICS` = main comparison (tables, failure analysis); `ALL_METRICS` = also computed and tested
 
 **`scores.csv`**: one row per distorted image. Columns are the pair columns plus one raw-score column per metric (stored raw, not sign-flipped).
 
@@ -102,6 +103,6 @@ It returns the top-k cases, capped at N per distortion type so the selection sta
 3. Within each (ref, dist_type), metric scores move monotonically with distortion level (check with Spearman vs level).
 4. The sign/direction check is applied before PLCC and printed in the notebook. ✔ tested (raw SRCC sign vs `higher_is_better`)
 5. Cross-device: on 20 images, CPU vs MPS (A) and CPU vs CUDA (B) agree to within 1e-3 relative error.
-   ✔ A, 2026-10-30, 40 pairs: traditional metrics identical; LPIPS max 2.5e-6, DISTS max 7.1e-6.
+   ✔ A, 2026-10-30, 40 pairs: traditional metrics identical; LPIPS-Alex max 2.5e-6, DISTS max 7.1e-6.
    ✔ `test_learned_metrics_cpu_vs_accelerator` (skipped on CPU-only machines) and `test_committed_scores_reproduce`
      (recomputes 7 rows of `scores.csv` on CPU; run on WSL to cross-check D-12).

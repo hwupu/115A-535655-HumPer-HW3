@@ -15,14 +15,20 @@ class MetricSpec:
     note: str
 
 
+# Main comparison. Both learned metrics share the VGG16 backbone, so LPIPS vs DISTS compares formulas (D-23).
 METRICS = [
     MetricSpec("psnr", "psnr", True, "traditional", "pixel MSE on RGB, capped at 80 dB"),
     MetricSpec("ssim", "ssim", True, "traditional", "luminance/contrast/structure on YIQ luma; pyiqa clamps cs >= 0 (D-20)"),
     MetricSpec("ms_ssim", "ms_ssim", True, "traditional", "SSIM over 5 scales on Y channel"),
-    MetricSpec("lpips", "lpips", False, "learned", "AlexNet feature distance, v0.1 linear weights"),
-    MetricSpec("dists", "dists", False, "learned", "VGG structure + texture (mean/var) similarity"),
+    MetricSpec("lpips_vgg", "lpips-vgg", False, "learned", "VGG16 feature distance, v0.1 linear weights"),
+    MetricSpec("dists", "dists", False, "learned", "VGG16 structure + texture (mean/var) similarity"),
 ]
-BY_NAME = {m.name: m for m in METRICS}
+# Supplementary only (backbone remark in the report); not in the main tables or failure analysis.
+EXTRA_METRICS = [
+    MetricSpec("lpips_alex", "lpips", False, "learned", "AlexNet feature distance, v0.1 linear weights"),
+]
+ALL_METRICS = METRICS + EXTRA_METRICS
+BY_NAME = {m.name: m for m in ALL_METRICS}
 
 
 def device_for(spec: MetricSpec, device: torch.device) -> torch.device:

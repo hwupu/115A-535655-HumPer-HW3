@@ -38,7 +38,7 @@ _TYPE_TO_GROUP = {t: g for g, ts in DIST_GROUPS.items() for t in ts}
 def load_pairs(root: Path = KADID_ROOT, n_refs: int | None = None, seed: int = 0) -> pd.DataFrame:
     """Return one row per distorted image.
 
-    Columns: id, ref_path, dist_path, ref_id, dist_type, dist_name, dist_group, level, mos.
+    Columns: id, ref_path, dist_path, ref_id, dist_type, dist_name, dist_group, level, mos, mos_var.
     Paths are POSIX strings relative to the repo root (portable across macOS/WSL).
     `mos` is KADID's `dmos` column, which despite its name is higher = better (1..5).
     `n_refs` samples whole reference images, so every distortion type/level stays balanced.
@@ -56,13 +56,14 @@ def load_pairs(root: Path = KADID_ROOT, n_refs: int | None = None, seed: int = 0
         "dist_type": parts[1],
         "level": parts[2],
         "mos": df["dmos"].astype(float),
+        "mos_var": df["var"].astype(float),  # variance of the individual ratings (rater disagreement)
     })
     out["dist_name"] = out["dist_type"].map(DIST_NAMES)
     out["dist_group"] = out["dist_type"].map(_TYPE_TO_GROUP)
     if n_refs is not None:
         refs = np.random.default_rng(seed).choice(sorted(out["ref_id"].unique()), n_refs, replace=False)
         out = out[out["ref_id"].isin(refs)]
-    cols = ["id", "ref_path", "dist_path", "ref_id", "dist_type", "dist_name", "dist_group", "level", "mos"]
+    cols = ["id", "ref_path", "dist_path", "ref_id", "dist_type", "dist_name", "dist_group", "level", "mos", "mos_var"]
     return out[cols].sort_values("id").reset_index(drop=True)
 
 

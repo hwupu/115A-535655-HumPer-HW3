@@ -8,7 +8,7 @@ A `Proposed` decision needs both members to agree at the next planning/review.
 | D-01 | 2026-10-30 | Run locally (Mac M2 Pro + WSL2 PC), not Google Cloud | Inference only; LPIPS/DISTS are light; avoids setup and cost | Proposed | A |
 | D-02 | 2026-10-30 | Use `uv` for env + lockfile, Python 3.11 | Reproducible (`uv.lock`), fast | Proposed | A |
 | D-03 | 2026-10-30 | Dataset: KADID-10k (fallback: TID2013) | Public, no request form, 25 distortion types × 5 levels → rich per-type analysis | Proposed | A |
-| D-04 | 2026-10-30 | Metrics: PSNR, SSIM, MS-SSIM, LPIPS-alex, DISTS (all via `pyiqa`) | Meets the "traditional + learned + extra" requirement; one consistent API | Proposed | A |
+| D-04 | 2026-10-30 | Metrics: PSNR, SSIM, MS-SSIM, LPIPS-alex, DISTS (all via `pyiqa`) | Meets the "traditional + learned + extra" requirement; one consistent API | Superseded by D-23 | A |
 | D-05 | 2026-10-30 | PLCC after 5-param logistic fit; also report raw PLCC | Standard VQEG practice; transparent | Proposed | B |
 | D-06 | 2026-10-30 | Failure cases = top rank-gap, max 1–2 per distortion type, then visual inspection | Rubric forbids cherry-picking; quantitative first | Proposed | B |
 | D-07 | 2026-10-30 | Process: Scrum-lite with markdown backlog/board, 3 short sprints | 2-person team, ~2.5 weeks | Proposed | B |
@@ -27,6 +27,7 @@ A `Proposed` decision needs both members to agree at the next planning/review.
 | D-20 | 2026-11-02 | Keep pyiqa's SSIM as-is (contrast-structure clamped at 0), and say so in the Setup section | Found by B-05 cross-check vs a textbook SSIM; differs ≤2e-3 per image on samples. Impact on SRCC to be measured in B-22 together with downsampling | Proposed | A |
 | D-21 | 2026-11-02 | Branch + PR per ticket; @ALLEN07056 is code reviewer (CODEOWNERS); @hwupu implements code tickets with the AI agent | Requested by @hwupu. Gives a human review gate on AI-written code (DoD) | Proposed | A |
 | D-22 | 2026-11-02 | Treat DISTS as possibly *in-domain* on KADID-10k: verify in Ding et al. (TPAMI 2022) whether its weights were fitted on KADID-10k; if so, footnote it in Results | A metric tuned on the test set has an unfair advantage; affects interpretation, not code | Proposed | A |
+| D-23 | 2026-11-02 | Main LPIPS = **LPIPS-VGG** (`lpips-vgg`, v0.1), same VGG16 backbone as DISTS. LPIPS-AlexNet kept as supplementary column `lpips_alex` | HW is about comparing *formulas*; a shared backbone removes the backbone confound between LPIPS and DISTS. Backbones change raw values (Zhang et al. 2018), but all comparisons are rank-based anyway | Accepted (A); B to confirm | A |
 
 ## Template
 
