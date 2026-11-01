@@ -1,7 +1,7 @@
 import numpy as np
 import pandas as pd
 
-from humper.failures import family_pairs, metric_pairs, select_diverse, vs_human
+from humper.failures import family_pairs, grid, logistic_residuals, metric_pairs, select_diverse, vs_human
 
 
 def _toy(n_refs=3, n_per_ref=6, seed=0) -> pd.DataFrame:
@@ -57,3 +57,28 @@ def test_select_diverse_respects_caps():
     c = pd.DataFrame({"gap": [0.9, 0.8, 0.7, 0.6], "dist_name": ["a", "a", "b", "c"], "ref_id": [1, 2, 1, 3]})
     picked = select_diverse(c, k=3, max_per={"dist_name": 1, "ref_id": 1})
     assert list(picked["gap"]) == [0.9, 0.6]  # 0.8 repeats type a, 0.7 repeats ref 1
+
+
+def test_logistic_residuals_finds_planted_optimistic_metric():
+    s = _toy(n_refs=10)
+    worst = s["mos"].idxmin()
+    s.loc[worst, "dists"] = 1e-3  # DISTS: near-perfect; the logistic maps it to a high MOS
+    top = logistic_residuals(s).iloc[0]
+    assert (top["id"], top["metric"], top["direction"]) == (s.loc[worst, "id"], "dists", "too_optimistic")
+    assert top["residual"] > 1
+
+
+def test_family_pairs_accepts_single_metrics():
+    s = _toy(n_refs=1, n_per_ref=6)
+    lo, hi = s["mos"].idxmin(), s["mos"].idxmax()
+    s.loc[lo, "ssim"], s.loc[hi, "ssim"] = s.loc[hi, "ssim"], s.loc[lo, "ssim"]  # only SSIM swaps
+    top = family_pairs(s, min_mos_diff=0.1, trad=["ssim"], learned=["lpips_vgg"]).iloc[0]
+    assert {top["id_i"], top["id_j"]} == {s.loc[lo, "id"], s.loc[hi, "id"]}
+    assert top["human_sides_with"] == "learned"
+
+
+def test_grid_is_type_by_level():
+    s = _toy().assign(dist_type=lambda d: d["dist_name"].str[-1].astype(int), level=lambda d: 1 + d.index % 5)
+    g = grid(s, s["mos"])
+    assert list(g.index) == [f"type{k}" for k in range(6)] and set(g.columns) <= {1, 2, 3, 4, 5}
+    assert grid(s, s["mos"], ref_id=1).notna().to_numpy().sum() == 6  # one image per cell for a single reference

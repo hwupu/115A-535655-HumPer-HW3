@@ -7,6 +7,7 @@ Three candidate lists, matching the HW3 spec:
   A. metric_pairs(): two metrics disagree on the same image        gap = |r_a - r_b|
   B. vs_human():     a metric disagrees with MOS                    gap = r_m - r_mos (signed)
   C. family_pairs(): traditional vs learned *ranking* of two images of the same reference
+Plus logistic_residuals() (case B seen through PLCC) and grid() (type x level heatmaps).
 """
 
 from itertools import combinations
@@ -14,6 +15,7 @@ from itertools import combinations
 import numpy as np
 import pandas as pd
 
+from humper.evaluate import fit_logistic
 from humper.metrics import METRICS, aligned
 
 TRADITIONAL = [m.name for m in METRICS if m.family == "traditional"]
@@ -74,14 +76,34 @@ def vs_human(scores: pd.DataFrame, var_quantile: float = 0.9) -> pd.DataFrame:
     return out.reindex(out["gap"].abs().sort_values(ascending=False).index).reset_index(drop=True)
 
 
-def family_pairs(scores: pd.DataFrame, var_quantile: float = 0.9, min_mos_diff: float = 0.5) -> pd.DataFrame:
+def logistic_residuals(scores: pd.DataFrame, var_quantile: float = 0.9) -> pd.DataFrame:
+    """Case B through PLCC: one row per (image, metric). `fitted` = MOS predicted by the same VQEG logistic
+    used for PLCC (fitted on all pairs); residual = fitted - MOS in MOS units, so metrics are comparable.
+    residual > 0: too optimistic. Sorted by |residual|."""
+    s = scores.reset_index(drop=True)
+    fitted = {m.name: fit_logistic(aligned(s, m.name), s["mos"]) for m in METRICS}
+    test = s["psnr"] < 80
+    keep = test & reliable(s[test], var_quantile).reindex(s.index, fill_value=False)
+    rows = [
+        s.loc[keep, INFO].assign(metric=name, fitted=f[keep], residual=f[keep] - s.loc[keep, "mos"])
+        for name, f in fitted.items() if f is not None
+    ]
+    out = pd.concat(rows, ignore_index=True)
+    out["direction"] = np.where(out["residual"] > 0, "too_optimistic", "too_pessimistic")
+    return out.reindex(out["residual"].abs().sort_values(ascending=False).index).reset_index(drop=True)
+
+
+def family_pairs(scores: pd.DataFrame, var_quantile: float = 0.9, min_mos_diff: float = 0.5,
+                 trad: list[str] | None = None, learned: list[str] | None = None) -> pd.DataFrame:
     """Case C: pairs (i, j) of distorted versions of the *same* reference where the traditional family
     ranks i above j and the learned family ranks j above i. Family score = mean within-reference rank of
     its metrics. strength = min(|d_trad|, |d_learned|), so both families must be confident.
-    `human_sides_with` uses MOS; pairs with |MOS_i - MOS_j| < min_mos_diff count as "tie"."""
+    `human_sides_with` uses MOS; pairs with |MOS_i - MOS_j| < min_mos_diff count as "tie".
+    `trad`/`learned` narrow a family to single metrics, e.g. trad=["ssim"], learned=["lpips_vgg"]."""
     s = eval_set(scores)
     r = ranks(s, by="ref_id")
-    s = s.assign(trad=r[TRADITIONAL].mean(axis=1), learned=r[LEARNED].mean(axis=1), ok=reliable(s, var_quantile))
+    s = s.assign(trad=r[trad or TRADITIONAL].mean(axis=1), learned=r[learned or LEARNED].mean(axis=1),
+                 ok=reliable(s, var_quantile))
     out = []
     for ref_id, g in s[s["ok"]].groupby("ref_id"):
         i, j = np.triu_indices(len(g), k=1)
@@ -143,3 +165,13 @@ def systematic(scores: pd.DataFrame, threshold: float = 0.5) -> pd.DataFrame:
     r = ranks(s)
     gap = pd.DataFrame({m.name: (r[m.name] - r["mos"]).abs() > threshold for m in METRICS})
     return gap.groupby(s["dist_name"]).mean().round(3)
+
+
+def grid(scores: pd.DataFrame, values: pd.Series, ref_id: int | None = None) -> pd.DataFrame:
+    """Mean of a per-image value in a distortion type x level table (types in KADID order).
+    With `ref_id`, only that reference's 125 images (one image per cell)."""
+    df = scores.assign(v=values.to_numpy())
+    if ref_id is not None:
+        df = df[df["ref_id"] == ref_id]
+    order = scores.drop_duplicates("dist_type").sort_values("dist_type")["dist_name"]
+    return df.pivot_table(index="dist_name", columns="level", values="v", aggfunc="mean").reindex(order)

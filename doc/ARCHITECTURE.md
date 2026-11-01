@@ -23,7 +23,8 @@ Small analysis project. Design goal: **compute expensive scores once, analyse ma
 ├── notebooks/
 │   ├── 01_data_check.ipynb
 │   ├── 02_correlation.ipynb
-│   └── 03_failure_cases.ipynb
+│   ├── 03_failure_cases.ipynb
+│   └── 04_selected_cases.ipynb   # the 5 report cases + type × level heatmaps
 ├── tests/test_sanity.py      # metric sanity checks (§5)
 ├── data/                     # gitignored — raw dataset
 ├── results/                  # scores.csv, tables/, figures/
@@ -75,10 +76,13 @@ Candidates come only from images with `mos_var` ≤ its 90th percentile.
 - `metric_pairs()`: case A, `gap = |r_a − r_b|` for all 10 metric pairs
 - `vs_human()`: case B, signed `gap = r_m − r_mos` (`too_optimistic` / `too_pessimistic`)
 - `family_pairs()`: case C, same-reference pairs where the traditional and learned family means (within-reference ranks) order two images oppositely; `strength = min(|Δtrad|, |Δlearned|)`, `human_sides_with` ∈ {traditional, learned, tie}
+- `logistic_residuals()`: case B on the MOS scale, `f_m(x) − MOS` with the PLCC logistic (D-25)
+- `family_pairs(trad=[...], learned=[...])` also compares single metrics (C-1: SSIM vs LPIPS-VGG)
+- `grid(scores, values, ref_id=None)`: distortion type × level mean table for heatmaps
 - `select_diverse(cands, k, score, max_per)`: greedy top-k with caps (per distortion type / reference / metric pair)
 - `systematic()`: share of images per type with |rank gap| > 0.5 (systematic vs isolated); `family_agreement()`: per-reference Kendall τ
 
-**`viz.py`**: `case_figure()` (reference | distorted | |diff| | 1−SSIM map | LPIPS-VGG spatial map, with scores + ranks), `pair_figure()` (case C).
+**`viz.py`**: `case_figure()` (reference | distorted | |diff| | 1−SSIM map | LPIPS-VGG spatial map, with scores + ranks), `pair_figure()` (case C), `case_heatmaps()` (type × level, all refs vs one ref), `srcc_grid_figure()` (SRCC per type × level per metric).
 Outputs: `results/failures/{candidates,selected}_{A,B,C}.csv`, `results/figures/failures/*.png`.
 
 ## 4. Runtime (cross-platform)
