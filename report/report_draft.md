@@ -5,108 +5,249 @@
 > The perceptual explanations in §4–§5 started as AI hypotheses (AGENTS.md). Lines marked *(verified)* were checked numerically.
 > When @ALLEN07056 approves the PR, the team takes ownership of the text (D-26). Before the PDF: cut to ≤ 4 pages (B-19) and convert (D-08).
 
-## Background: the metrics and the evaluation, explained simply
+## Background: Image Quality Metrics, Explained Simply (ELI5)
 
-> Primer adapted from the team's ELI5 notes (2026-11-02). It is longer than the PDF can hold: condense it into §1 for the final report (B-19).
-> The *In this project* lines link each idea to our setup and results.
+> From the team's notes (2026-11-02), kept in their original form. Topics: PSNR, SSIM, LPIPS, DISTS, pooling, MS-SSIM, the KADID-10k benchmark, SRCC/PLCC, and backbones. How each idea maps onto our setup is in the table at the end of this section. Condense into §1 for the PDF (B-19).
 
-### Full-reference image quality metrics
+---
 
-A full-reference metric compares a distorted image with its pristine original and outputs one number. The question is how well that number agrees with what people see.
+### 1. PSNR (Peak Signal-to-Noise Ratio)
 
-**PSNR (Peak Signal-to-Noise Ratio): "how different is each dot?"**
-- It compares the two images pixel by pixel, averages the squared differences (MSE) and converts the result to decibels:
-$$\text{PSNR} = 10\log_{10}\frac{\text{MAX}^2}{\text{MSE}}, \qquad \text{MAX} = 255 \text{ for 8-bit images}$$
-- Higher = closer to the original.
-- Rules of thumb:
-  - above 40 dB: hard to tell from the original;
-  - 30–50 dB: good;
-  - 20–30 dB: noticeable loss;
-  - below 20 dB: clearly degraded;
-  - identical images: ∞.
-- **Catch:** it counts raw pixel errors, not what humans notice. A tiny shift of the whole image costs a lot of PSNR but looks fine.
-- *In this project:* computed on RGB. Identical images are capped at 80 dB (D-18).
+A score for how close a damaged or compressed picture is to the original.
 
-**SSIM (Structural Similarity): "does it still look like the original?"**
-- In small windows (an 11×11 Gaussian) it compares three things:
-  - **luminance:** is the window equally bright? (μ)
-  - **contrast:** is the light/dark spread the same? (σ)
-  - **structure:** do the patterns and edges line up? (σ_xy)
-- The three comparisons are multiplied into one local score, and the local scores are averaged over the image:
+**ELI5:** Photocopy a drawing and the copy comes out a bit fuzzy. PSNR is a number saying how fuzzy the copy is compared to the original.
+
+- **Higher = more like the original**
+- **Lower = messier**
+
+**Steps:**
+1. Compare original and copy pixel by pixel.
+2. Average the squared differences (this is the MSE, mean squared error).
+3. Convert to a log scale in decibels:
+
+$$\text{PSNR} = 10 \cdot \log_{10}\left(\frac{\text{MAX}^2}{\text{MSE}}\right)$$
+
+MAX is the brightest possible pixel value (255 for 8-bit images).
+
+**Rules of thumb:**
+- 30-50 dB: good quality (above ~40 dB is very hard to tell from the original)
+- 20-30 dB: noticeable loss
+- Below 20 dB: clearly degraded
+- Infinite: identical images
+
+**Catch:** It only counts raw pixel differences, not what humans notice. A tiny shift of the whole image hurts PSNR a lot but looks fine.
+
+---
+
+### 2. SSIM (Structural Similarity Index)
+
+Scores how similar two images *look*, based on how the eye judges them rather than raw pixel differences.
+
+**ELI5:** PSNR asks "how different is each dot?" SSIM asks "does this still look like the original?" It checks whether patterns, shapes, and edges survived.
+
+**Compared in small patches:**
+1. **Luminance:** is the patch equally bright?
+2. **Contrast:** is the light/dark difference the same?
+3. **Structure:** do patterns and edges line up? (the key part)
+
+These are multiplied into one score per patch, then averaged over the image.
+
 $$\text{SSIM}(x,y) = \frac{(2\mu_x\mu_y + c_1)(2\sigma_{xy} + c_2)}{(\mu_x^2 + \mu_y^2 + c_1)(\sigma_x^2 + \sigma_y^2 + c_2)}$$
-- 1 = identical, about 0.9 or more = very similar, 0.5–0.8 = visibly different.
-- It is **hand-crafted**: nothing is learned from data, and only the constants and the window size are chosen.
-- Compared with PSNR:
-  - A slight brightening hurts PSNR a lot but SSIM little.
-  - Blurred edges hurt SSIM more than PSNR.
-- Shifts, rotations and heavy distortions can still fool it.
-- *In this project:* pyiqa computes SSIM on the **luma (Y) channel only**, so a pure color change is invisible to it (case B-1). The luminance term is *relative*, so the same brightness drop costs more in dark regions (case C-1).
 
-**MS-SSIM (Multi-Scale SSIM): SSIM from several viewing distances.**
-- A painting shows brushstrokes from 5 cm away and overall shapes from across the room. SSIM looks from one distance only.
-- MS-SSIM compares contrast and structure at 5 scales, halving the image size each time, and compares brightness only at the coarsest scale.
-- It multiplies the per-scale results, each raised to a weight measured with human viewers (the middle scales matter most):
-$$\text{MS-SSIM} = [l_M]^{\alpha_M}\prod_{j=1}^{M}[c_j]^{\beta_j}[s_j]^{\gamma_j}$$
-- It is still hand-crafted, fast and deterministic. It needs images large enough to downsample several times, and it is still weak on geometric shifts.
-- *In this project:* the weights are (0.045, 0.286, 0.300, 0.236, 0.133). Large, smooth damage that SSIM's small window misses shows up at the coarse scales (case A-1 and its scale-by-scale figure).
+μ = average brightness, σ² = variance (contrast), σ_xy = how the two patches vary together (structure).
 
-**Backbone: the pretrained network the learned metrics build on.**
-- A large network such as VGG or AlexNet is trained for ImageNet classification. It turns an image into features: early layers capture edges and textures, deep layers capture shapes and objects.
-- A learned metric adds a small part on top that turns feature differences into a score.
-- The metric inherits the backbone's strengths and blind spots, and **different backbones give different, non-comparable scores**.
-- *In this project:* LPIPS and DISTS both use **VGG16**, so differences between them come from the formula (D-23). Switching LPIPS to AlexNet changes its SRCC from 0.720 to 0.822 (§3).
+**Reading it:** 1.0 = identical; ~0.9+ = very similar; ~0.5-0.8 = visibly different; near 0 = no structural similarity.
 
-**LPIPS (Learned Perceptual Image Patch Similarity): a trained "robot eye".**
-- Both images go through the backbone. At each of 5 layers the features are normalised and their squared difference is weighted by **linear weights learned from human 2AFC judgments** ("which of two patches is closer to the original?", the BAPPS dataset, 64×64 patches). The result is averaged over space and summed over layers.
-- 0 = identical, about 0.1 = very similar, 0.5 or more = clearly different. **Lower = better.**
-- It tolerates things humans ignore (tiny shifts, similar textures) and punishes things they notice (blur, artifacts).
-- The original paper found that even uncalibrated deep features beat SSIM and PSNR.
-- It can be fooled by adversarial noise.
-- *In this project:* LPIPS-VGG v0.1. Its spatial map and per-layer values appear in the case figures; they add up to the score.
+**Why better than PSNR:** Brighten a photo slightly and PSNR may drop a lot while SSIM stays high. Blur the edges and PSNR may barely change while SSIM drops.
 
-**DISTS (Deep Image Structure and Texture Similarity): "SSIM on deep features, with texture tolerance".**
-- Two photos of the same grass field have every blade in a different place: pixels say "totally different", the eye says "same grass". DISTS agrees with the eye.
-- It runs both images through VGG16. At each layer and channel it compares:
-  - **texture:** the global *means* of the feature maps, ignoring position;
-  - **structure:** the global *correlation* between the feature maps.
-- Learned weights combine the terms over layers. 0 = identical, **lower = better.**
-- DISTS replaces max-pooling with **L2 pooling**:
-  - max-pooling keeps only the largest value in each 2×2 window, so it jumps when content shifts by one pixel;
-  - L2 pooling takes the root-mean-square of the window, so every value contributes and small shifts change little.
-- It tolerates texture resampling (grass, bricks, fur, water) and does well on GAN and super-resolution outputs.
-- *In this project:* DISTS's weights were **trained on KADID-10k**, our test set (D-22). Because it compares whole-image statistics, it has no spatial map; the case figures show its per-layer texture/structure terms instead. That same global view explains case B-2.
+**Limits:** Not a true model of human vision. Fooled by shifts, rotations, and heavy distortions.
 
-### KADID-10k
+**Is SSIM hand-crafted?** Yes. A researcher designed the formula by hand from assumptions about vision. Nothing is learned from data. Only small constants (c1, c2) and the window size (e.g. 11x11 Gaussian) are chosen by hand.
 
-81 clean photos, each damaged in 25 ways at 5 strengths, giving 10,125 images rated by people (a mean opinion score, MOS, from 1 to 5, higher = better). The distortion groups are blur, color, compression (JPEG, JPEG2000), noise, brightness change, spatial distortions, and sharpness/contrast.
-- These are mostly classical distortions, not the artifacts of generative models, where LPIPS and DISTS tend to shine more.
+---
 
-### How agreement with humans is measured
+### 3. LPIPS (Learned Perceptual Image Patch Similarity)
 
-**SRCC (Spearman rank correlation): "same ranking?"**
-- Rank all images by the humans and by the metric, then correlate the two rankings. 1 = identical order, 0 = unrelated, −1 = reversed.
-- It looks at order only, so it compares metrics fairly across very different scales.
-- *In this project:* instead of reporting |SRCC| for lower-is-better metrics, we flip their sign first (§2), so every metric reads "higher = agrees more".
+A neural network judges how different two images *look*, trained to agree with human judgments.
 
-**PLCC (Pearson linear correlation): "same straight line?"**
-- It uses the actual values, so a curved metric–MOS relation lowers it. As is standard, we first fit a monotonic 5-parameter logistic curve (§2).
-- **High SRCC with lower PLCC** means the metric ranks correctly but its scale is warped relative to human scores.
+**ELI5:** PSNR counts differing dots, SSIM checks whether patterns survived, LPIPS asks a trained "robot eye" whether two pictures *feel* the same. That robot eye learned from thousands of human "which is closer to the original?" judgments.
 
-### Summary and what the literature reports
+**Steps:**
+1. Feed both images into a pretrained deep network (VGG, AlexNet, SqueezeNet).
+2. Grab internal features from several layers (early = edges/textures, deep = shapes/objects).
+3. Compare features layer by layer using learned weights.
+4. Average into one number.
 
-| metric | type | key idea | scales | better | KADID-10k SRCC: literature† | KADID-10k SRCC: ours |
-|---|---|---|---|---|---|---|
-| PSNR | hand-crafted | pixel error | pixel | higher | 0.676 | 0.676 |
-| SSIM | hand-crafted | luminance, contrast, structure | single | higher | 0.724 | 0.619 (0.752 with Wang's downsampling) |
-| MS-SSIM | hand-crafted | SSIM across zoom levels | 5 | higher | 0.826 | 0.826 |
-| LPIPS | learned | calibrated deep-feature distance | 5 layers | lower | 0.843 | 0.720 VGG / 0.822 AlexNet |
-| DISTS | learned | deep structure + texture statistics | 6 stages | lower | 0.887 | 0.814 |
+**Reading it:** 0 = identical; ~0.1 = very similar; ~0.5+ = clearly different. **Lower is better** (the reverse of PSNR/SSIM).
 
-†As reported in MR-IQA (Table 2). Other papers report different values, e.g. SSIM 0.783 and MS-SSIM 0.838 (JND-SalCAR), or SSIM ≈ 0.72 and DISTS ≈ 0.88 (PIQ). The differences come from implementation details: color vs grayscale, resizing, and the backbone.
-- **PSNR and MS-SSIM** match the literature exactly.
-- **SSIM** matches once Wang's original downsampling is used (B-22).
-- **LPIPS** is close with the AlexNet backbone, which the literature number most likely uses.
-- **DISTS** is 0.07 lower than reported, and we have not explained why yet (TODO: check whether the published numbers resize the images, or use a different weight version).
+**Why useful:** Tolerates things humans ignore (tiny shifts, similar-looking textures) and punishes things humans notice (blur, odd artifacts, wrong textures). Standard for generated images, super-resolution, and style transfer.
+
+**Limits:** Depends on the backbone, so scores aren't comparable across backbones. Can be fooled by adversarial noise. Only an approximation of human perception.
+
+**Is it deep-learning based?** Yes, with two learned parts:
+- **Backbone:** trained for ImageNet classification, not quality assessment, yet its features match human perception surprisingly well.
+- **Linear calibration layers:** trained on human similarity judgments (BAPPS dataset). The paper also found that even untouched, uncalibrated features beat SSIM and PSNR.
+
+---
+
+### 4. DISTS (Deep Image Structure and Texture Similarity)
+
+A learned metric that treats **structure** and **texture** differently. Sits between SSIM and LPIPS: deep features like LPIPS, SSIM-style comparison.
+
+**ELI5:** Two photos of the same grassy field have every blade in a different spot, so a pixel comparison says "totally different!", but your eye says "same grass." DISTS agrees with your eye: layout matters (structure), exact placement of repeating texture doesn't.
+
+**Steps:**
+1. Run both images through a pretrained VGG, with max-pooling replaced by L2 pooling (so small shifts matter less).
+2. At each layer and channel, compute:
+   - **Texture term:** compare the *means* of the feature maps (overall texture statistics, ignoring position)
+   - **Structure term:** compare the *correlation* between feature maps (spatial layout)
+3. Combine with learned weights across layers.
+
+Think of it as **"SSIM on deep features, with texture tolerance."**
+
+**Reading it:** 0 = identical; higher = more different. **Lower is better.**
+
+**Why useful:** Tolerant of texture resampling (grass, bricks, fur, water). Good for GAN outputs and super-resolution. Agrees well with human ratings.
+
+**Limits:** Depends on the VGG backbone, can be fooled by adversarial changes, and its learned weights may not generalize to every image type.
+
+---
+
+### 5. Pooling: max-pooling vs L2 pooling
+
+**Pooling** shrinks a grid of numbers by summarizing small windows (say 2x2) into one number each.
+
+**Max-pooling: "Who's the loudest?"** Keep the biggest number, discard the rest.
+
+```
+[1  3]
+[2  9]   ->  9
+```
+
+- Keeps the strongest signal (e.g. "an edge is somewhere here")
+- Loses *where* in the window it was
+- Jumpy: a 1-pixel shift can change which value is the max
+
+**L2 pooling: "What's the overall energy?"** Square every number, average, take the square root (root-mean-square).
+
+```
+[1  3]
+[2  9]   ->  sqrt((1^2 + 3^2 + 2^2 + 9^2) / 4) = sqrt(95/4) ~ 4.9
+```
+
+- Every value contributes, louder ones count more
+- Smoother and more shift-tolerant
+
+| | Max-pooling | L2 pooling |
+|---|---|---|
+| Rule | Keep the biggest value | Root of the average of squares |
+| Uses all values? | No | Yes |
+| Shift sensitivity | Higher (jumpy) | Lower (smooth) |
+
+DISTS swaps in L2 pooling so the metric doesn't change sharply from tiny shifts that humans wouldn't notice.
+
+---
+
+### 6. MS-SSIM (Multi-Scale SSIM)
+
+SSIM applied at several zoom levels, then combined into one score.
+
+**ELI5:** A painting looks different from 2 inches away (brushstrokes) than from across the room (overall shapes). SSIM looks from one distance only. MS-SSIM looks from several and combines them.
+
+**Steps:**
+1. Start with both images at full size.
+2. Compute contrast and structure comparisons (brightness only at the coarsest scale).
+3. Blur and downsample both by 2, then repeat, typically for 5 scales.
+4. Multiply the per-scale scores, each raised to a weight found from experiments with human viewers (middle scales matter most).
+
+$$\text{MS-SSIM} = \left[l_M\right]^{\alpha_M} \cdot \prod_{j=1}^{M} \left[c_j\right]^{\beta_j} \left[s_j\right]^{\gamma_j}$$
+
+**Reading it:** 1.0 = identical; closer to 0 = more different. Higher is better.
+
+**Why useful:** Adapts to viewing distance and resolution, matches human ratings better than single-scale SSIM, still hand-crafted so fast and deterministic. Common in compression research and as a training loss.
+
+**Limits:** Needs images large enough to downsample several times. Still weak on geometric shifts and heavy generative distortions.
+
+---
+
+### 7. KADID-10k benchmark
+
+A dataset for testing how well quality metrics agree with human opinion.
+
+**ELI5:** Take 81 clean photos and wreck each one in 25 ways at 5 strengths, giving 10,125 damaged images. People rated how bad each looks (a mean opinion score, MOS). A good metric ranks images the same way humans do.
+
+Distortion groups include blur, noise, color changes, compression (JPEG, JPEG2000), brightness changes, spatial distortions, and sharpness/contrast changes.
+
+**Results (SRCC / PLCC, from the MR-IQA paper's Table 2):**
+
+| Metric | SRCC | PLCC |
+|---|---|---|
+| PSNR | 0.676 | 0.675 |
+| SSIM | 0.724 | 0.717 |
+| MS-SSIM | 0.826 | 0.820 |
+| LPIPS | 0.843 | 0.839 |
+| DISTS | 0.887 | 0.886 |
+
+Ordering: PSNR < SSIM < MS-SSIM < LPIPS < DISTS, tracking each metric's perceptual awareness.
+
+**Caveats:**
+- Other papers report slightly different numbers (e.g. SSIM 0.783 SRCC and MS-SSIM 0.838 in JND-SalCAR; PIQ reports ~0.72 for SSIM and ~0.88 for DISTS). Differences come from implementation, color vs. grayscale, and resizing.
+- LPIPS values depend on the backbone.
+- KADID-10k is mostly traditional distortions (blur, noise, compression), not generative-model artifacts, where DISTS and LPIPS tend to shine more.
+- Even state-of-the-art full-reference metrics are far from perfect on KADID-10k.
+
+---
+
+### 8. SRCC, PLCC, and backbone
+
+**PLCC (Pearson Linear Correlation Coefficient)**
+Plot each image as a dot (human score vs. metric score). PLCC asks whether the dots form a straight line. 1.0 = perfect line, 0 = random cloud, -1.0 = perfectly opposite. It cares about actual values, so a curved relationship lowers it (papers often fit a curve first).
+
+**SRCC (Spearman Rank-order Correlation Coefficient)**
+Line up images best to worst by humans and by the metric, then ask whether the lineups match. 1.0 = identical ranking, 0 = unrelated, -1.0 = reversed. It cares only about order, so it fairly compares metrics with different scales. "Lower is better" metrics (LPIPS, DISTS) give negative values, so the absolute value is usually reported.
+
+| | Asks | Sensitive to |
+|---|---|---|
+| SRCC | "Same ranking?" | Order only |
+| PLCC | "Same straight-line relationship?" | Actual values |
+
+High SRCC with lower PLCC means the metric ranks correctly but its scale is warped relative to human scores.
+
+**Backbone**
+The foundation and frame of a house: you don't rebuild it, you add rooms on top. In deep learning, it's a big pretrained network (VGG, AlexNet) that already learned to see by training on millions of images (ImageNet), turning an image into features (edges, textures, shapes, objects).
+
+For LPIPS and DISTS, the backbone extracts features and a small learned part on top turns feature differences into a score.
+- Different backbones give different scores ("LPIPS-VGG" is not directly comparable to "LPIPS-AlexNet").
+- Bigger backbones are usually more accurate but slower.
+- The metric inherits the backbone's strengths and blind spots.
+
+---
+
+### Summary comparison
+
+| Metric | Type | Key idea | Scales | Better |
+|---|---|---|---|---|
+| PSNR | Hand-crafted | Pixel error | Pixel level | Higher |
+| SSIM | Hand-crafted | Brightness, contrast, structure | Single | Higher |
+| MS-SSIM | Hand-crafted | SSIM across zoom levels | Multiple | Higher |
+| LPIPS | Learned | Deep feature distance, calibrated on human judgments | Multiple (deep layers) | Lower |
+| DISTS | Learned | Structure + texture on deep features | Multiple (deep layers) | Lower |
+
+---
+
+### How this maps onto our project
+
+| Metric | In our setup | Our KADID-10k SRCC (literature, Table in §7) | Where it shows up |
+|---|---|---|---|
+| PSNR | RGB; identical images capped at 80 dB (D-18) | 0.676 (0.676) | — |
+| SSIM | pyiqa: **luma (Y) only**, no downsampling | 0.619 (0.724); **0.752** with Wang's downsampling (B-22) | B-1: color change invisible; C-1: relative luminance term over-penalises dark regions |
+| MS-SSIM | luma only, weights 0.045 / 0.286 / 0.300 / 0.236 / 0.133 | 0.826 (0.826) | A-1: coarse scales catch large, smooth damage |
+| LPIPS | **VGG16** v0.1 (D-23); AlexNet kept as supplementary | 0.720 VGG / 0.822 AlexNet (0.843) | A-2, B-2, C-1: spatial map and per-layer values |
+| DISTS | VGG16; weights **trained on KADID-10k** (D-22), so in-domain | 0.814 (0.887); gap not explained yet (TODO) | A-2, B-2: per-stage texture/structure terms (no spatial map) |
+
+SRCC/PLCC: instead of reporting |SRCC| for LPIPS/DISTS, we flip their sign before correlating (§2). PLCC is computed after the 5-parameter logistic fit.
+
+**Sources:** [MR-IQA](https://arxiv.org/pdf/2302.13770) · [Full-reference IQA on KADID-10k](https://arxiv.org/pdf/1907.02096) · [JND-SalCAR](https://arxiv.org/pdf/1902.05316) · [PIQ documentation](https://piq.readthedocs.io/en/latest/overview.html)
 
 ## 1. Metrics and Dataset
 
